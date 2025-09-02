@@ -203,6 +203,10 @@ function DayCard({ day, done, toggle, setAll, clearAll, defaultOpen }: { day: Da
                 </ul>
               )}
             </div>
+            {/* Galería de fotos del día */}
+<div className="mt-2">
+  <PhotoGallery placeId={`day-${day.date}`} placeName={`Fotos de ${day.city}`} />
+</div>
           </SectionCard>
         </div>
       </div>
