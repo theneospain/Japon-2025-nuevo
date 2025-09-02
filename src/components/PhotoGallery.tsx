@@ -4,8 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Image as ImageIcon, Plus, Link2, ExternalLink, X, Upload } from "lucide-react";
 
 // Guardamos fotos como dataURL comprimido en localStorage (rápido y offline).
-// Nota: localStorage tiene límite (~5MB por dominio). Para empezar vale; si os quedáis cortos, luego pasamos a IndexedDB/Cloudinary.
-
+// Nota: localStorage tiene límite (~5–10 MB). Si os quedáis cortos, mejor enlazar Álbum compartido.
 type PlaceGallery = { photos: string[]; album?: string };
 
 function usePlaceGallery() {
@@ -93,13 +92,14 @@ export default function PhotoGallery({ placeId, placeName }: { placeId: string; 
   const { get, addPhoto, removePhoto, setAlbum } = usePlaceGallery();
   const g = get(placeId);
   const [viewer, setViewer] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+
+  // ✅ Abrir GALERÍA (no cámara). Sin "capture". Permite varias.
+  const galleryRef = useRef<HTMLInputElement>(null);
 
   const addUrl = () => {
     const url = prompt("Pega la URL DIRECTA de la imagen (jpg/png/webp).");
     if (!url) return;
-    // Si no es dataURL, la guardamos igual (se verá por red). Para iPhone/Drive/Photos, quizá no sea “directa”.
-    addPhoto(placeId, url);
+    addPhoto(placeId, url); // si es URL remota, se mostrará tal cual
   };
 
   const linkAlbum = () => {
@@ -108,16 +108,18 @@ export default function PhotoGallery({ placeId, placeName }: { placeId: string; 
   };
 
   const onPickFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    try {
-      const dataUrl = await compressToDataURL(f);
-      addPhoto(placeId, dataUrl);
-    } catch {
-      alert("No se pudo procesar la imagen.");
-    } finally {
-      e.target.value = ""; // reset para poder volver a seleccionar la misma imagen si quieres
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    for (const f of files) {
+      try {
+        const dataUrl = await compressToDataURL(f);
+        addPhoto(placeId, dataUrl);
+      } catch {
+        alert("No se pudo procesar una de las imágenes.");
+      }
     }
+    e.target.value = ""; // reset para poder re-seleccionar las mismas
   };
 
   return (
@@ -127,21 +129,21 @@ export default function PhotoGallery({ placeId, placeName }: { placeId: string; 
           <ImageIcon size={14} /> Recuerdos (máx. 8)
         </div>
         <div className="flex items-center gap-2">
-          {/* Subir del móvil (cámara/carrete) */}
+          {/* G A L E R Í A — SIN capture → abre selector/galería en iOS/Android */}
           <input
-            ref={fileRef}
+            ref={galleryRef}
             type="file"
-            accept="image/*"
-            capture="environment"
+            accept="image/*,image/heic,image/heif"
+            multiple
             className="hidden"
             onChange={onPickFile}
           />
           <button
-            onClick={() => fileRef.current?.click()}
+            onClick={() => galleryRef.current?.click()}
             className="text-[11px] px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-flex items-center gap-1"
-            title="Hacer foto o elegir del carrete"
+            title="Elegir desde galería"
           >
-            <Upload size={12} /> Subir del móvil
+            <Upload size={12} /> Subir desde galería
           </button>
 
           {/* Pegar URL */}
@@ -175,7 +177,7 @@ export default function PhotoGallery({ placeId, placeName }: { placeId: string; 
 
       {g.photos.length === 0 ? (
         <div className="text-xs text-zinc-500 dark:text-zinc-400">
-          Aún no hay fotos. Usa “Subir del móvil”, “Pegar URL” o enlaza un Álbum.
+          Aún no hay fotos. Usa “Subir desde galería”, “Pegar URL” o enlaza un Álbum.
         </div>
       ) : (
         <div className="grid grid-cols-4 gap-2">
@@ -204,4 +206,5 @@ export default function PhotoGallery({ placeId, placeName }: { placeId: string; 
     </div>
   );
 }
+
 
