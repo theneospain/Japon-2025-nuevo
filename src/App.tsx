@@ -408,6 +408,7 @@ function InfoPractical() {
       <div className="text-sm">{p.brief}</div>
       <div className="flex items-center justify-between"><Stars value={p.rating} /><div className="flex items-center gap-2 text-xs">{p.links.official && <a href={p.links.official} target="_blank" rel="noreferrer" className="underline">Oficial</a>}{p.links.gmaps && <a href={p.links.gmaps} target="_blank" rel="noreferrer" className="underline">Mapa</a>}</div></div>
       {foods.length ? (<div><div className="text-xs text-zinc-500 dark:text-zinc-400">Recomendaciones cerca</div><FoodBadges f={foods} /></div>) : (p.foods && p.foods.length ? <div className="text-xs text-zinc-500 dark:text-zinc-400">*No hay resultados que cumplan los filtros*</div> : null)}
+      <PhotoGallery placeId={p.id} placeName={p.name} />
       <div className="flex items-center gap-2 pt-1"><button onClick={share} className="text-xs px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-flex items-center gap-1"><Share2 size={14} />Compartir</button>{p.links.gmaps && (<a href={`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`} target="_blank" rel="noreferrer" className="text-xs px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">WhatsApp</a>)}</div>
     </div>
   );
