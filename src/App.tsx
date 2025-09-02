@@ -29,7 +29,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-
+import PhotoGallery from "./components/PhotoGallery";
 // ──────────────────────────────────────────────────────────────────────────────
 // Utilidades
 // ──────────────────────────────────────────────────────────────────────────────
