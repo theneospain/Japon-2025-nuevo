@@ -596,20 +596,78 @@ function InfoPractical() {
 // Bloque 6: Checklist por viajero + Curiosidades
 // ──────────────────────────────────────────────────────────────────────────────
  const TRAVELLERS = ["Moi", "Jani", "Encarni", "MAngel", "Tani", "Isaac", "Aaron", "Elisa", "Josué", "Yacelly", "Alba"] as const;
- const DEFAULT_CHECK_ITEMS = [
-  "Pasaporte (vigencia + copia)",
-  "Billetes y reservas (vuelos/hoteles)",
-  "Seguro médico / tarjeta sanitaria",
-  "JR Pass / Suica / PASMO",
-  "SIM/eSIM o Pocket Wi‑Fi",
-  "Adaptador de enchufe tipo A/B",
-  "Cables y cargadores",
-  "Power bank",
-  "Dinero en efectivo (¥) / tarjeta sin comisiones",
-  "Botiquín básico / medicación",
-  "Paraguas o chubasquero",
-  "Calzado cómodo",
- ] as const;
+// Sustituye TODO el contenido actual de DEFAULT_CHECK_ITEMS por este:
+const DEFAULT_CHECK_ITEMS = [
+  // 🧾 PAPELES & RESERVAS (hacer YA)
+  "🛂 Pasaporte en vigor (mín. 6 meses) + foto + copia en nube",
+  "🩺 Seguro médico: póliza en PDF + teléfono 24/7 guardados offline",
+  "🧳 Visit Japan Web: QRs inmigración/aduanas en PDF + captura",
+  "🚄 Shinkansen: asientos juntos + espacio maletas (>160 cm total)",
+  "🎢 Universal Studios (23/10): Entradas + Express Pass + Timed Entry SNW",
+  "🏎 Kart Akihabara (30/10): reservar turno (mejor nocturno)",
+  "🗻 Hakone Free Pass (31/10): comprar con antelación",
+  "🏰 Disney (2/11): entradas online con fecha (si vais)",
+  "🌊 teamLab Planets (si interesa): entradas online",
+  "🍣 Restaurantes especiales/sushi top: reservar mesa",
+  "📶 Conectividad: eSIM o Pocket Wi-Fi (mín. 1 por pareja)",
+  "💳 Suica/Welcome Suica/ICOCA lista (física o en Apple/Google Wallet)",
+  "🧾 JR Pass (si aplica): activación/fechas planificadas",
+  "🛏 Reservas de hoteles confirmadas + direcciones en japonés/inglés",
+  "🗺 Mapas offline descargados (Tokyo, Kyoto, Osaka + Hakone/Nara)",
+  "👛 Presupuesto por día (efectivo + tarjeta sin comisiones)",
+  "🧾 Copia de reservas (vuelos/hoteles/actividades) en Drive/Dropbox",
+
+  // 🧳 MALETA (facturada)
+  "🧥 Capas: camisetas técnicas + sudadera ligera + cortavientos impermeable",
+  "👖 1 pantalón cómodo + 1 vaquero + 1 ‘arreglado’",
+  "👟 Zapatillas cómodas + 🩴 chanclas de ducha",
+  "🥿 Pantuflas (no siempre las dan)",
+  "🧦 Ropa interior y calcetines extra (añade compresión para vuelo)",
+  "☔ Chubasquero/poncho + paraguas mini",
+  "🧼 Bolsa de lavandería + 2–3 sobres de detergente o tiras",
+  "😴 Pijama fino (habitaciones ~20–23 °C)",
+  "🧵 Toalla microfibra + mini kit costura + imperdibles + cinta americana",
+  "📸 1 outfit bonito para fotos nocturnas (Tokio/Ginza)",
+
+  // 🎒 MOCHILA DE DÍA
+  "🛂 Pasaporte + 💳 tarjeta física + IC (Suica/Welcome Suica)",
+  "📱 Móvil con mapas offline + 🔋 batería externa + 🔌 cable",
+  "💧 Botella reutilizable (fuentes/konbini)",
+  "🧻 Tissues/toallitas + 🧴 gel hidroalcohólico",
+  "💊 Mini botiquín: paracetamol, ibuprofeno, tiritas, antirozaduras, sales, biodramina, colirio",
+  "🥜 Snacks seguros (barritas/ frutos secos / galletas GF)",
+  "📝 Tarjeta de alergias impresa (JP/ES) + sobres de tamari sin gluten",
+  "🗑 Bolsa de basura pequeña (hay pocas papeleras)",
+  "☔ Paraguas mini o chubasquero",
+  "🛍 Tote plegable para compras",
+
+  // 🔌 TECH & CARGA
+  "🔌 Adaptadores Tipo A (100 V) — lleva 2 + ladrón pequeño",
+  "⚡ Cargadores USB-C/USB-A (móvil, reloj, cámara)",
+  "🔋 Power bank 10–20k (uno por pareja)",
+  "🎧 Auriculares + tapones (vuelo/tren)",
+  "📚 Kindle/Tablet con pelis/libros offline",
+  "📷 Cámara/GoPro + tarjetas + baterías",
+
+  // 💊 SALUD & MEDICACIÓN
+  "💊 Medicación personal en cabina, con receta y caja original",
+  "📄 Certificados impresos si llevas fármacos ‘sensibles’ o en cantidad",
+  "🌤 Crema solar ligera + 💄 cacao de labios + aftersun mini",
+  "🧪 Enzimas lactasa y carbón activo (por si ‘accidentes’ de comida)",
+  "🧾 Seguro: copia en papel + PDF offline",
+
+  // 🍣 INTOLERANCIAS (gluten/lactosa)
+  "🔍 En etiquetas: 小麦 (trigo) y 乳 / 乳製品 (lácteos)",
+  "🚫 Evitar: shōyu con trigo, tempura, katsu, udon, okonomiyaki, currys espesados",
+  "✅ Más seguros: yakitori a la sal (shio), sashimi, arroz, onigiri simples (umeboshi/salmón sin salsa), soba 100% 十割 (confirmar)",
+  "🗣 Frase rápida (imprimir/guardar): ‘私はグルテン（小麦）と乳製品が食べられません。小麦/乳や同じ油・器具での混入も避けたいです。’",
+
+  // 💸 DINERO & PAGOS
+  "💴 Efectivo inicial: ¥20,000–30,000 por persona",
+  "🏧 ATM 7-Eleven para retirar con tarjeta extranjera (por si acaso)",
+  "💳 Tarjeta sin comisiones activada + PIN recordado",
+] as const;
+
  const slug = (s: string) => s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
  type CheckItem = { id: string; label: string; done: boolean };
  function loadChecklist(name: string): CheckItem[] { try { const raw = localStorage.getItem("jp_checklist_" + slug(name) + "_v1"); if (raw) return JSON.parse(raw); } catch { } return DEFAULT_CHECK_ITEMS.map((label, i) => ({ id: String(i), label, done: false })); }
@@ -662,20 +720,55 @@ function InfoPractical() {
   );
  }
 
- const FACTS = [
-  "Más de 5 millones de máquinas expendedoras: ¡hay una por ~25 personas!",
-  "Los trenes son tan puntuales que un retraso de 1 minuto puede generar disculpas públicas.",
-  "Slurping (sorber fideos) no es de mala educación: indica que disfrutas el ramen.",
-  "Los konbini (combini) venden de todo: comida fresca, pago de facturas y recogida de paquetes.",
-  "Muchos restaurantes muestran platos de cera en escaparate (shokuhin sampuru).",
-  "Hay hoteles cápsula diseñados para viajeros y trabajadores nocturnos.",
-  "En los onsen, los tatuajes pueden requerir cubrirse en algunos baños (aunque cada vez hay más tolerancia).",
-  "En estaciones verás líneas en el suelo para hacer filas exactas al subir al tren.",
-  "El té verde (ocha) se ofrece gratis en muchos establecimientos.",
-  "Las calles suelen estar limpísimas: casi no hay papeleras, llévate tu basura.",
-  "El emoji 🎌 representa banderas cruzadas de Japón usadas en festivales.",
-  "En templos y santuarios, inclinarse (ojigi) es señal de respeto; sigue el flujo local.",
- ] as const;
+// Sustituye TODO el array FACTS por este:
+const FACTS = [
+  "🍶 Japón tiene >5 millones de máquinas expendedoras: ~1 por 25 personas.",
+  "🚆 La puntualidad de los trenes es extrema: retrasos de segundos generan disculpas.",
+  "🍜 Sorber el ramen (slurping) no es de mala educación: indica que lo disfrutas.",
+  "🏪 Los konbini venden de todo: comida fresca, pagos, tickets y paquetes 24/7.",
+  "🍱 Muchos restaurantes muestran réplicas de comida (shokuhin sampuru) en el escaparate.",
+  "🛏️ Los hoteles cápsula nacieron para viajeros y trabajadores nocturnos.",
+  "♨️ En algunos onsen, los tatuajes se piden cubrir (cada vez más permisivos).",
+  "🟨 En estaciones hay marcas en el suelo para formar filas exactas al subir.",
+  "🍵 El té verde (ocha) suele ser gratis con la comida.",
+  "🧹 Calles limpísimas y pocas papeleras: lleva tu basura contigo.",
+  "🎌 El emoji 🎌 representa banderas cruzadas usadas en festivales.",
+  "🙇 Inclinarse (ojigi) es señal de respeto; sigue el flujo local.",
+  "💴 Cultura aún muy ‘cash’: aunque el pago sin contacto crece rápido.",
+  "♻️ Separación estricta de basura; podrás ver calendarios por barrios.",
+  "☔ Muchos comercios tienen ‘lockers’ para paraguas en la entrada.",
+  "🗓️ Golden Week (finales de abril–principios de mayo) es pico de viajes internos.",
+  "🍡 Dulces estacionales: sabores sakura en primavera y castaña en otoño.",
+  "🚽 Los w.c. japoneses tienen chorros, secado y música para privacidad.",
+  "🚫💸 No se deja propina: un ‘gracias’ es suficiente.",
+  "🚲 Bicis por acera en algunas zonas; ojo a los parkings de bicis.",
+  "📳 Alerta sísmica en móviles/TV: práctica normal y muy efectiva.",
+  "🍉 Existen sandías cuadradas (sobre todo decorativas y carísimas).",
+  "🎤 Karaoke en boxes privados es plan clásico entre amigos/empresa.",
+  "📚 Manga y anime son parte cotidiana: librerías y cafés temáticos por doquier.",
+  "🧸 Gachapon (máquinas de cápsulas) con coleccionables de todo tipo.",
+  "📸 Purikura: cabinas de fotos con filtros, muy populares.",
+  "🛤️ ‘Stamp rally’: sellos coleccionables en estaciones/atracciones.",
+  "🎴 Omikuji: papelitos de fortuna en templos; ata la mala suerte al soporte.",
+  "🧿 Omamori: amuletos de buena suerte para coche, estudios o salud.",
+  "⛩️ Budismo y sintoísmo conviven; verás templos y santuarios muy cercanos.",
+  "🍱 Cultura bento: cajas de comida preciosas en estaciones (ekiben).",
+  "🌸 Temporadas muy marcadas: hanami en primavera y momiji en otoño.",
+  "🤫 En trenes se habla bajo y se evita el manos libres.",
+  "🚬 Hay zonas designadas para fumar; fuera de ellas, multa.",
+  "🏧 7-Eleven/JP Bank suelen aceptar tarjetas extranjeras en cajeros.",
+  "🔐 Coin-lockers en estaciones/centros comerciales para dejar maletas.",
+  "🪪 Tarjetas IC (Suica/PASMO/ICOCA) sirven para tren, bus y combis.",
+  "🕒 Check-in hotel típico a las 15:00; check-out a las 10:00–11:00.",
+  "👟 En casas/ryokan y algunos locales: zapatos fuera → zapatillas.",
+  "🛍️ Mucho embalaje individual: útil para regalos, menos para el planeta.",
+  "🎶 Semáforos con sonidos distintos para personas invidentes.",
+  "🎰 Pachinko: salas ruidosas de recreativas muy populares.",
+  "🔥❄️ Máquinas expendedoras venden bebidas frías y también calientes.",
+  "✨ Iluminaciones de invierno espectaculares en parques y barrios.",
+  "🐟 El mercado interior de pescado se movió a Toyosu; Tsukiji ‘outer’ sigue vivo.",
+] as const;
+
  function CuriositiesSection() {
   const [idx, setIdx] = useState(0);
   const next = () => setIdx(i => (i + 1) % FACTS.length);
