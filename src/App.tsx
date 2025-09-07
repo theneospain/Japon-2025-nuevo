@@ -35,6 +35,8 @@ import NotesLite from "./components/NotesLite";
 import { makeBlockId } from "./utils/slug";
 
 
+
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Utilidades
 // ──────────────────────────────────────────────────────────────────────────────
@@ -92,12 +94,18 @@ function SectionCard({ title, subtitle, children }: { title: string; subtitle?: 
 // ──────────────────────────────────────────────────────────────────────────────
 function TripMeta() {
   const start = useMemo(() => new Date(2025, 9, 20), []); // 20 oct 2025
-  const end = useMemo(() => new Date(2025, 10, 4), []); // 4 nov 2025
+  const end   = useMemo(() => new Date(2025, 10, 4), []); // 4 nov 2025
   const today = new Date();
-  const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86400000) + 1);
+
+  const days    = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86400000) + 1);
   const elapsed = today < start ? 0 : today > end ? days : Math.min(days, Math.floor((today.getTime() - start.getTime()) / 86400000) + 1);
   const progress = Math.round((elapsed / days) * 100);
-  const status = today < start ? `Comienza en ${Math.ceil((start.getTime() - today.getTime()) / 86400000)} días` : today > end ? "Viaje finalizado" : "¡Viaje en curso!";
+  const status = today < start
+    ? `Comienza en ${Math.ceil((start.getTime() - today.getTime()) / 86400000)} días`
+    : today > end
+      ? "Viaje finalizado"
+      : "¡Viaje en curso!";
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between text-sm text-zinc-600 dark:text-zinc-300">
@@ -118,9 +126,10 @@ function TripMeta() {
 // ──────────────────────────────────────────────────────────────────────────────
 // Bloque 2: Itinerario con checks
 // ──────────────────────────────────────────────────────────────────────────────
- type Activity = { time?: string | null; text: string };
- type DayPlan = { date: string; city: string; emoji?: string; activities: Activity[] };
- const ITINERARY: DayPlan[] = [
+type Activity = { time?: string | null; text: string };
+type DayPlan  = { date: string; city: string; emoji?: string; activities: Activity[] };
+
+const ITINERARY: DayPlan[] = [
   { date: "2025-10-20", city: "Vuelos a Japón", emoji: "✈️", activities: [
     { time: "09:30–17:40", text: "Vuelo Madrid → Doha" },
     { time: "20:25–12:55 (+1)", text: "Vuelo Doha → Tokio (NRT)" },
@@ -128,30 +137,31 @@ function TripMeta() {
   { date: "2025-10-21", city: "Llegada y Osaka (5 noches)", emoji: "🇯🇵", activities: [
     { time: "12:55", text: "Llegada a Narita (NRT)" },
     { time: "14:00–17:00", text: "Shinkansen a Osaka" },
-    { time: null, text: "Check‑in hotel Osaka" },
-    { time: "Tarde/Noche", text: "Namba, Den‑Den Town, Dotonbori, Kuromon, Glico, Don Quijote, Namba Yasaka, Shinsaibashi, Karaoke" },
+    { time: null, text: "Check-in hotel Osaka" },
+    { time: "Tarde/Noche", text: "Namba, Den-Den Town, Dotonbori, Kuromon, Glico, Don Quijote, Namba Yasaka, Shinsaibashi, Karaoke" },
   ]},
   { date: "2025-10-22", city: "Osaka", emoji: "🏯", activities: [
     { text: "Castillo de Osaka" },{ text: "Umeda Sky" },{ text: "Acuario Kaiyukan" },{ text: "Templo Shitennoji" },{ text: "Isshinji" },{ text: "Sumiyoshi Taisha" }
   ]},
   { date: "2025-10-23", city: "Universal + Shinsekai", emoji: "🎢", activities: [{ text: "Universal Studios Japan" },{ text: "Shinsekai (Tsutenkaku)" }]},
   { date: "2025-10-24", city: "Hiroshima + Miyajima", emoji: "⛩️", activities: [{ text: "Excursión a Hiroshima" },{ text: "Miyajima (torii flotante)" }]},
-  { date: "2025-10-25", city: "Nara", emoji: "🦌", activities: [{ text: "Templo Todai‑ji" },{ text: "Parque de ciervos" },{ text: "Kasuga Taisha" }]},
+  { date: "2025-10-25", city: "Nara", emoji: "🦌", activities: [{ text: "Templo Todai-ji" },{ text: "Parque de ciervos" },{ text: "Kasuga Taisha" }]},
   { date: "2025-10-26", city: "Traslado a Kioto (3 noches)", emoji: "🚄", activities: [{ text: "Osaka → Kioto" },{ time:"Tarde", text: "Castillo de Nijo" },{ text: "Kyoto Tower" }]},
-  { date: "2025-10-27", city: "Kioto", emoji: "⛩️", activities: [{ text: "Fushimi Inari" },{ text: "Sannenzaka & Ninenzaka" },{ text: "Kinkaku‑ji" },{ text: "Heian" },{ text: "Gion y Pontocho" }]},
-  { date: "2025-10-28", city: "Arashiyama + opciones", emoji: "🎋", activities: [{ text: "Bosque de bambú" },{ text: "Otagi Nenbutsu‑ji" },{ text: "Opcional: Ginkaku‑ji / Kiyomizudera / Ryoan‑ji / Kibune" }]},
-  { date: "2025-10-29", city: "Traslado a Tokio (6 noches)", emoji: "🚄", activities: [{ text: "Kioto → Tokio" },{ text: "Opcional: Shirakawa‑go" },{ text: "Godzilla Shinjuku" },{ text: "Mirador Gobierno Metropolitano" },{ text: "Kabukicho, Cruce Shibuya, Hachiko" }]},
+  { date: "2025-10-27", city: "Kioto", emoji: "⛩️", activities: [{ text: "Fushimi Inari" },{ text: "Sannenzaka & Ninenzaka" },{ text: "Kinkaku-ji" },{ text: "Heian" },{ text: "Gion y Pontocho" }]},
+  { date: "2025-10-28", city: "Arashiyama + opciones", emoji: "🎋", activities: [{ text: "Bosque de bambú" },{ text: "Otagi Nenbutsu-ji" },{ text: "Opcional: Ginkaku-ji / Kiyomizudera / Ryoan-ji / Kibune" }]},
+  { date: "2025-10-29", city: "Traslado a Tokio (6 noches)", emoji: "🚄", activities: [{ text: "Kioto → Tokio" },{ text: "Opcional: Shirakawa-go" },{ text: "Godzilla Shinjuku" },{ text: "Mirador Gobierno Metropolitano" },{ text: "Kabukicho, Cruce Shibuya, Hachiko" }]},
   { date: "2025-10-30", city: "Harajuku + Akihabara + Kart", emoji: "🎮", activities: [{ text: "Harajuku (Takeshita)" },{ text: "Akihabara (maid café, figuras)" },{ time:"Noche", text: "Kart (con PIC)" }]},
   { date: "2025-10-31", city: "Hakone (Monte Fuji)", emoji: "🗻", activities: [{ text: "Hakone" },{ text: "Teleférico Owakudani" },{ text: "Vistas del Fuji (si clima)" }]},
-  { date: "2025-11-01", city: "Asakusa + Roppongi + Tokyo Tower", emoji: "🏮", activities: [{ text: "Asakusa (Sensō‑ji + Nakamise)" },{ text: "Roppongi" },{ text: "Tokyo Tower" }]},
+  { date: "2025-11-01", city: "Asakusa + Roppongi + Tokyo Tower", emoji: "🏮", activities: [{ text: "Asakusa (Sensō-ji + Nakamise)" },{ text: "Roppongi" },{ text: "Tokyo Tower" }]},
   { date: "2025-11-02", city: "Parques / Nikkō / Kasukabe", emoji: "🎢", activities: [{ text: "Disneyland / DisneySea" },{ text: "Nikkō" },{ text: "Kasukabe" }]},
   { date: "2025-11-03", city: "Meiji + Ginza + Odaiba", emoji: "🛍️", activities: [{ text: "Santuario Meiji" },{ text: "Ginza (sushi)" },{ text: "Shiodome → Yurikamome a Odaiba" },{ text: "Rainbow Bridge, Gundam, barco Sumida" }]},
   { date: "2025-11-04", city: "Tokio (libre) + Vuelo", emoji: "🧳", activities: [{ time:"Mañana", text: "Libre (TeamLab o compras)" },{ time:"21:55–04:40 (+1)", text: "Vuelo Tokio → Doha" }]},
- ];
+];
 
 function DayHeader({ dateISO, city, emoji, isToday, isPast }: { dateISO: string; city: string; emoji?: string; isToday: boolean; isPast: boolean }) {
-  const d = new Date(dateISO + "T00:00:00");
+  const d  = new Date(dateISO + "T00:00:00");
   const df = d.toLocaleDateString("es-ES", { weekday: "short", day: "2-digit", month: "short" });
+
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -166,15 +176,26 @@ function DayHeader({ dateISO, city, emoji, isToday, isPast }: { dateISO: string;
   );
 }
 
-function DayCard({ day, done, toggle, setAll, clearAll, defaultOpen }: { day: DayPlan; done: Record<string, boolean>; toggle: (id: string) => void; setAll: () => void; clearAll: () => void; defaultOpen?: boolean }) {
+function DayCard({
+  day, done, toggle, setAll, clearAll, defaultOpen,
+}: {
+  day: DayPlan;
+  done: Record<string, boolean>;
+  toggle: (id: string) => void;
+  setAll: () => void;
+  clearAll: () => void;
+  defaultOpen?: boolean;
+}) {
   const d = new Date(day.date + "T00:00:00");
   const now = new Date();
-  const isPast = d < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const isPast  = d < new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const isToday = d.toDateString() === new Date().toDateString();
+
   const [open, setOpen] = useState(!!defaultOpen);
-  const total = day.activities.length;
+  const total     = day.activities.length;
   const completed = day.activities.reduce((acc, _a, i) => acc + (done[`${day.date}-${i}`] ? 1 : 0), 0);
-  const pct = Math.round((completed / Math.max(1, total)) * 100);
+  const pct       = Math.round((completed / Math.max(1, total)) * 100);
+
   return (
     <div className="relative">
       <div className="absolute left-5 top-0 bottom-0 w-[2px] bg-zinc-200 dark:bg-zinc-800" />
@@ -190,33 +211,41 @@ function DayCard({ day, done, toggle, setAll, clearAll, defaultOpen }: { day: Da
               </div>
               <div className="w-full h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden"><div className="h-full bg-zinc-900 dark:bg-zinc-100" style={{ width: `${pct}%` }} /></div>
               <div className="flex items-center gap-2">
-                <button onClick={() => setOpen(!open)} className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-1"><ChevronDown size={16} className={`${open ? "rotate-180" : ""} transition-transform`} />{open ? "Ocultar" : "Ver actividades"}</button>
-                <button onClick={setAll} className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Marcar todo</button>
+                <button onClick={() => setOpen(!open)} className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-1">
+                  <ChevronDown size={16} className={`${open ? "rotate-180" : ""} transition-transform`} />{open ? "Ocultar" : "Ver actividades"}
+                </button>
+                <button onClick={setAll}   className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Marcar todo</button>
                 <button onClick={clearAll} className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Reset</button>
-                <MapDayButton
-  day={day}
-  places={PLACES.map(p => ({ name: p.name, gmaps: p.links.gmaps }))}
-/>
 
+                <MapDayButton
+                  day={day}
+                  places={PLACES.map(p => ({ name: p.name, gmaps: p.links.gmaps }))}
+                />
               </div>
+
               {open && (
                 <ul className="divide-y divide-zinc-100 dark:divide-zinc-800 rounded-xl border border-zinc-100 dark:border-zinc-800 overflow-hidden">
                   {day.activities.map((a, i) => {
-                    const id = `${day.date}-${i}`; const checked = !!done[id];
+                    const id = `${day.date}-${i}`;
+                    const checked = !!done[id];
                     return (
                       <li key={id} className="flex items-center gap-3 p-3 bg-white/60 dark:bg-zinc-900/40">
                         <input type="checkbox" checked={checked} onChange={() => toggle(id)} className="w-5 h-5 rounded-md border-zinc-300 dark:border-zinc-700" />
-                        <div className="flex-1 text-sm">{a.time && <span className="text-zinc-500 dark:text-zinc-400 mr-2">{a.time}</span>}<span>{a.text}</span></div>
+                        <div className="flex-1 text-sm">
+                          {a.time && <span className="text-zinc-500 dark:text-zinc-400 mr-2">{a.time}</span>}
+                          <span>{a.text}</span>
+                        </div>
                       </li>
                     );
                   })}
                 </ul>
               )}
             </div>
+
             {/* Galería de fotos del día */}
-<div className="mt-2">
-  <PhotoGallery placeId={`day-${day.date}`} placeName={`Fotos de ${day.city}`} />
-</div>
+            <div className="mt-2">
+              <PhotoGallery placeId={`day-${day.date}`} placeName={`Fotos de ${day.city}`} />
+            </div>
           </SectionCard>
         </div>
       </div>
@@ -226,20 +255,16 @@ function DayCard({ day, done, toggle, setAll, clearAll, defaultOpen }: { day: Da
 
 function Itinerary() {
   const [done, setDone] = useState<Record<string, boolean>>(() => {
-    try {
-      return JSON.parse(localStorage.getItem("jp_done_v1") || "{}");
-    } catch {
-      return {};
-    }
+    try { return JSON.parse(localStorage.getItem("jp_done_v1") || "{}"); }
+    catch { return {}; }
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem("jp_done_v1", JSON.stringify(done));
-    } catch {}
+    try { localStorage.setItem("jp_done_v1", JSON.stringify(done)); } catch {}
   }, [done]);
 
-  const todayISO = new Date().toISOString().slice(0, 10);
+  // YYYY-MM-DD en horario local (evita desfases por UTC)
+  const todayISO = useMemo(() => new Date().toLocaleDateString("en-CA"), []);
 
   return (
     <div className="space-y-4">
@@ -248,30 +273,28 @@ function Itinerary() {
       </SectionCard>
 
       <div className="space-y-6">
-        {ITINERARY.map((day) => {
+        {ITINERARY.map((day) => { // <- corregido
           const toggle = (id: string) =>
             setDone((d) => ({ ...d, [id]: !d[id] }));
 
           const setAll = () =>
             setDone((d0) => {
               const c = { ...d0 } as Record<string, boolean>;
-              day.activities.forEach((_a, i) => {
-                c[`${day.date}-${i}`] = true;
-              });
+              day.activities.forEach((_a, i) => { c[`${day.date}-${i}`] = true; });
               return c;
             });
 
           const clearAll = () =>
             setDone((d0) => {
               const c = { ...d0 } as Record<string, boolean>;
-              day.activities.forEach((_a, i) => {
-                delete c[`${day.date}-${i}`];
-              });
+              day.activities.forEach((_a, i) => { delete c[`${day.date}-${i}`]; });
               return c;
             });
 
+          const blockId = makeBlockId(day.date, day.city);
+
           return (
-            <div key={day.date} className="space-y-3">
+            <div key={blockId} className="space-y-3">
               <DayCard
                 day={day}
                 done={done}
@@ -281,10 +304,11 @@ function Itinerary() {
                 defaultOpen={day.date === todayISO}
               />
 
-              {/* 👇 Panel de notas para cada día (global y automático) */}
+              {/* Panel de notas del día (key para remount limpio) */}
               <NotesLite
+                key={blockId}
                 tripId="japon-2025"
-                blockId={makeBlockId(day.date, day.city)}
+                blockId={blockId}
                 className="mt-2"
               />
             </div>
@@ -294,6 +318,7 @@ function Itinerary() {
     </div>
   );
 }
+
 
 
 // ──────────────────────────────────────────────────────────────────────────────
