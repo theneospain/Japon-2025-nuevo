@@ -33,7 +33,7 @@ import PhotoGallery from "./components/PhotoGallery";
 import MapDayButton from "./components/MapDayButton";
 import NotesLite from "./components/NotesLite";
 import { makeBlockId } from "./utils/slug";
-
+import Gastro from "./components/Gastro";
 
 
 
@@ -53,9 +53,11 @@ function formatEUR(n: number) {
 
 const TABS = [
   { key: "itinerary", label: "Itinerario", icon: CalendarRange, emoji: "🗓️" },
-  { key: "info", label: "Info práctica", icon: Info, emoji: "ℹ️" },
-  { key: "places", label: "Lugares", icon: MapPin, emoji: "📍" },
-  { key: "expenses", label: "Gastos", icon: Wallet, emoji: "💶" },
+  { key: "info",      label: "Info práctica", icon: Info,        emoji: "ℹ️" },
+  { key: "places",    label: "Lugares",       icon: MapPin,      emoji: "📍" },
+  { key: "expenses",  label: "Gastos",        icon: Wallet,      emoji: "💶" },
+  // 👇 Nueva pestaña
+  { key: "gastro",    label: "Gastronomía",   icon: Utensils,    emoji: "🍣" },
 ] as const;
 
 type TabKey = typeof TABS[number]["key"];
@@ -735,6 +737,17 @@ export default function JapanTripApp() {
             {tab === "info" && <InfoPractical />}
             {tab === "places" && <PlacesSection />}
             {tab === "expenses" && <ExpensesSection />}
+            {tab === "gastro" && (
+  <section id="gastro">
+    <SectionCard
+      title="Gastronomía 🍣"
+      subtitle="Listado por ciudad/barrio con filtros, votos y favoritos del grupo"
+    >
+      <Gastro tripId="japon-2025" />
+    </SectionCard>
+  </section>
+)}
+
           </motion.div></AnimatePresence>
         </main>
         <nav className="fixed bottom-0 inset-x-0 z-40">
