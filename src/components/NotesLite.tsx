@@ -27,8 +27,8 @@ type Note = {
   createdAt?: { seconds: number; nanoseconds: number } | null;
   reactions?: Record<string, string[]>;
   deviceId?: string;
-  localOnly?: boolean;
-  hidden?: boolean; // soft delete
+  localOnly?: boolean; // solo UI, no se sube a Firestore
+  hidden?: boolean;    // soft delete
 };
 
 const NAME_KEY = "notes_name";
@@ -57,7 +57,7 @@ export default function NotesLite({ tripId, blockId, className }: Props) {
     [tripId, blockId]
   );
 
-  // clave de cola local por bloque
+  // clave para cola local por bloque
   const PENDING_KEY = useMemo(
     () => `notes_pending_${tripId}_${blockId}`,
     [tripId, blockId]
@@ -67,33 +67,32 @@ export default function NotesLite({ tripId, blockId, className }: Props) {
     localStorage.setItem(NAME_KEY, (name || "Invitado").trim());
   }, [name]);
 
-  // Reintento automático de la cola local al cargar el bloque
+  // Reintento automático de cola local al entrar en el bloque
   useEffect(() => {
     (async () => {
+      const raw = localStorage.getItem(PENDING_KEY);
+      const pend = (raw ? JSON.parse(raw) : []) as Array<Omit<Note, "id">>;
+      if (!Array.isArray(pend) || pend.length === 0) return;
       try {
-        const raw = localStorage.getItem(PENDING_KEY);
-        const pend: Array<Omit<Note, "id">> = raw ? JSON.parse(raw) : [];
-        if (Array.isArray(pend) && pend.length) {
-          for (const n of pend) {
-            await addDoc(notesRef, {
-              content: n.content,
-              authorName: n.authorName,
-              createdAt: serverTimestamp(),
-              reactions: n.reactions || { "👍": [], "❤️": [], "🍜": [] },
-              deviceId: n.deviceId || deviceId,
-              hidden: n.hidden ?? false,
-            });
-          }
-          localStorage.removeItem(PENDING_KEY);
+        for (const n of pend) {
+          await addDoc(notesRef, {
+            content: n.content,
+            authorName: n.authorName,
+            createdAt: serverTimestamp(),
+            reactions: n.reactions || { "👍": [], "❤️": [], "🍜": [] },
+            deviceId: n.deviceId || deviceId,
+            hidden: n.hidden ?? false,
+          });
         }
+        localStorage.removeItem(PENDING_KEY);
       } catch {
-        // si falla, dejamos la cola para más tarde
+        // dejamos cola para siguientes intentos
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [PENDING_KEY, notesRef]);
 
-  // Suscripción a Firestore (y añadimos notas locales pendientes visibles)
+  // Suscripción a Firestore + unión con pendientes locales
   useEffect(() => {
     setError(null);
     const q = query(notesRef, orderBy("createdAt", "asc"), limit(400));
@@ -104,13 +103,12 @@ export default function NotesLite({ tripId, blockId, className }: Props) {
         snap.forEach((d) =>
           arr.push({ id: d.id, ...(d.data() as Omit<Note, "id">) })
         );
-        // Filtrar ocultas (soft delete)
-        const visible = arr.filter((n) => !n.hidden);
+        const visibles = arr.filter((n) => !n.hidden);
 
-        // Añadir visualmente las pendientes locales (si las hay)
+        // añadir pendientes locales (si las hay) solo para UI
         try {
           const raw = localStorage.getItem(PENDING_KEY);
-          const pend: Array<Omit<Note, "id">>> = raw ? JSON.parse(raw) : [];
+          const pend = (raw ? JSON.parse(raw) : []) as Array<Omit<Note, "id">>;
           if (Array.isArray(pend) && pend.length) {
             const locals: Note[] = pend.map((n, i) => ({
               id: `local-${i}`,
@@ -120,12 +118,12 @@ export default function NotesLite({ tripId, blockId, className }: Props) {
               createdAt:
                 n.createdAt ?? { seconds: Date.now() / 1000, nanoseconds: 0 },
             }));
-            setNotes([...visible, ...locals.filter((n) => !n.hidden)]);
+            setNotes([...visibles, ...locals.filter((x) => !x.hidden)]);
           } else {
-            setNotes(visible);
+            setNotes(visibles);
           }
         } catch {
-          setNotes(visible);
+          setNotes(visibles);
         }
       },
       (err) => {
@@ -158,9 +156,9 @@ export default function NotesLite({ tripId, blockId, className }: Props) {
 
   function queuePending(payload: Omit<Note, "id">) {
     try {
-      const arr: Array<Omit<Note, "id">> = JSON.parse(
+      const arr = (JSON.parse(
         localStorage.getItem(PENDING_KEY) || "[]"
-      );
+      ) as Array<Omit<Note, "id">>) || [];
       arr.push(payload);
       localStorage.setItem(PENDING_KEY, JSON.stringify(arr));
       // Pintamos también en UI
@@ -198,14 +196,14 @@ export default function NotesLite({ tripId, blockId, className }: Props) {
         createdAt: serverTimestamp(),
         reactions: { "👍": [], "❤️": [], "🍜": [] },
         deviceId,
-        hidden: false,
+        hidden: false, // visible por defecto
       });
       setInput("");
       areaRef.current?.focus();
     } catch (e) {
       console.error("[Notes] addDoc error", e);
       setError("No se pudo guardar ahora. Se intentará automáticamente.");
-      // Guardar en cola local
+      // Guardar en cola local (para reintento)
       queuePending({
         content,
         authorName: author,
@@ -235,11 +233,11 @@ export default function NotesLite({ tripId, blockId, className }: Props) {
   }
 
   async function deleteNote(n: Note) {
-    // Si aún está en cola local, bórrala del localStorage y de la UI
+    // Si aún está en cola local, la quitamos del localStorage y de la UI
     if (n.localOnly) {
       try {
         const raw = localStorage.getItem(PENDING_KEY) || "[]";
-        const pend: any[] = JSON.parse(raw);
+        const pend = (JSON.parse(raw) as any[]) || [];
         const idx = pend.findIndex(
           (x) =>
             x.content === n.content &&
@@ -255,7 +253,7 @@ export default function NotesLite({ tripId, blockId, className }: Props) {
       return;
     }
 
-    // Seguridad básica en cliente: solo el “dueño” del dispositivo puede borrar
+    // Seguridad básica en cliente: solo el “dueño” del dispositivo
     if (n.deviceId !== deviceId) return;
 
     try {
