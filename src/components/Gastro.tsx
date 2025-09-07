@@ -1,6 +1,7 @@
 // src/components/Gastro.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { GASTRO_PLACES, GastroPlace, PriceLevel } from "../data/gastro";
+import GastroMustEat from "./GastroMustEat";
 import { getDeviceId } from "../lib/device";
 import {
   collection,
@@ -16,23 +17,15 @@ type Props = { tripId: string; className?: string };
 
 type Counts = { votes: number; favs: number; myVote: boolean; myFav: boolean };
 
-// util: precio a €€
 function priceLabel(p: PriceLevel) {
   return "€".repeat(p);
 }
-
-// util: barrios por ciudad (derivado de data)
 function areasByCity(city: string) {
-  return Array.from(
-    new Set(GASTRO_PLACES.filter(p => p.city === city).map(p => p.area))
-  ).sort();
+  return Array.from(new Set(GASTRO_PLACES.filter(p => p.city === city).map(p => p.area))).sort();
 }
-
-// util: sorpresa del día (determinística por fecha y ponderada por votos)
 function pickSurprise(places: (GastroPlace & { counts?: Counts })[], seedStr: string) {
   if (places.length === 0) return null;
   const seed = [...seedStr].reduce((a,c)=>a+c.charCodeAt(0),0);
-  // peso = votos + 1 (para no dejar a cero)
   const weighted: GastroPlace[] = [];
   places.forEach(p => {
     const w = (p.counts?.votes ?? 0) + 1;
@@ -45,19 +38,21 @@ function pickSurprise(places: (GastroPlace & { counts?: Counts })[], seedStr: st
 export default function Gastro({ tripId, className }: Props) {
   const deviceId = useMemo(() => getDeviceId(), []);
   const todaySeed = useMemo(() => new Date().toLocaleDateString("en-CA"), []);
+  const [subtab, setSubtab] = useState<"lugares" | "imprescindibles">("lugares");
+
+  // Filtros para LUGARES
   const [city, setCity] = useState<"Osaka"|"Kyoto"|"Tokyo">("Osaka");
   const [area, setArea] = useState<string>("");
   const [q, setQ] = useState<string>("");
-  const [price, setPrice] = useState<PriceLevel | 0>(0); // 0 = todos
+  const [price, setPrice] = useState<PriceLevel | 0>(0);
   const [onlyNoResv, setOnlyNoResv] = useState<boolean>(false);
 
-  // Conteos por placeId (votos/favs y si yo voté/faveé)
   const [counts, setCounts] = useState<Record<string, Counts>>({});
 
-  // snapshot de votos/favs por place (simple y suficiente para dataset pequeño)
+  // snapshots de votos/favs
   useEffect(() => {
+    if (subtab !== "lugares") return;
     const unsubs: Array<() => void> = [];
-
     const placesInCity = GASTRO_PLACES.filter(p => p.city === city);
     placesInCity.forEach((p) => {
       const votesRef = collection(db, "trips", tripId, "gastro", p.id, "votes");
@@ -95,9 +90,8 @@ export default function Gastro({ tripId, className }: Props) {
     });
 
     return () => unsubs.forEach((u) => u());
-  }, [tripId, city, deviceId]);
+  }, [tripId, city, deviceId, subtab]);
 
-  // lista filtrada
   const filtered = useMemo(() => {
     const byCity = GASTRO_PLACES.filter(p => p.city === city);
     return byCity.filter(p => {
@@ -120,19 +114,12 @@ export default function Gastro({ tripId, className }: Props) {
   async function toggleVote(p: GastroPlace) {
     const ref = doc(db, "trips", tripId, "gastro", p.id, "votes", deviceId);
     const mine = counts[p.id]?.myVote;
-    try {
-      if (mine) await deleteDoc(ref);
-      else await setDoc(ref, { at: Date.now() });
-    } catch (e) { console.error("vote error", e); }
+    try { mine ? await deleteDoc(ref) : await setDoc(ref, { at: Date.now() }); } catch (e) { console.error("vote error", e); }
   }
-
   async function toggleFav(p: GastroPlace) {
     const ref = doc(db, "trips", tripId, "gastro", p.id, "favs", deviceId);
     const mine = counts[p.id]?.myFav;
-    try {
-      if (mine) await deleteDoc(ref);
-      else await setDoc(ref, { at: Date.now() });
-    } catch (e) { console.error("fav error", e); }
+    try { mine ? await deleteDoc(ref) : await setDoc(ref, { at: Date.now() }); } catch (e) { console.error("fav error", e); }
   }
 
   const cities: Array<"Osaka"|"Kyoto"|"Tokyo"> = ["Osaka","Kyoto","Tokyo"];
@@ -140,121 +127,143 @@ export default function Gastro({ tripId, className }: Props) {
 
   return (
     <div className={`space-y-4 ${className || ""}`}>
-      {/* Filtros */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
-        <select
-          className="rounded-xl bg-black/30 px-3 py-2 text-sm"
-          value={city}
-          onChange={(e)=>{ setCity(e.target.value as any); setArea(""); }}
+      {/* Subpestañas */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setSubtab("lugares")}
+          className={`text-sm px-3 py-1.5 rounded-lg border ${subtab === "lugares" ? "border-zinc-900 dark:border-zinc-100" : "border-zinc-200 dark:border-zinc-700"} hover:bg-zinc-100 dark:hover:bg-zinc-800`}
         >
-          {cities.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-
-        <select
-          className="rounded-xl bg-black/30 px-3 py-2 text-sm"
-          value={area}
-          onChange={(e)=>setArea(e.target.value)}
+          Lugares
+        </button>
+        <button
+          onClick={() => setSubtab("imprescindibles")}
+          className={`text-sm px-3 py-1.5 rounded-lg border ${subtab === "imprescindibles" ? "border-zinc-900 dark:border-zinc-100" : "border-zinc-200 dark:border-zinc-700"} hover:bg-zinc-100 dark:hover:bg-zinc-800`}
         >
-          {areas.map(a => <option key={a} value={a}>{a || "Todos los barrios"}</option>)}
-        </select>
-
-        <select
-          className="rounded-xl bg-black/30 px-3 py-2 text-sm"
-          value={price}
-          onChange={(e)=>setPrice(Number(e.target.value) as PriceLevel | 0)}
-        >
-          <option value={0}>Precio: todos</option>
-          <option value={1}>€</option>
-          <option value={2}>€€</option>
-          <option value={3}>€€€</option>
-          <option value={4}>€€€€</option>
-        </select>
-
-        <label className="flex items-center gap-2 rounded-xl bg-black/30 px-3 py-2 text-sm cursor-pointer">
-          <input type="checkbox" checked={onlyNoResv} onChange={(e)=>setOnlyNoResv(e.target.checked)} />
-          Sin reserva
-        </label>
-
-        <div className="flex items-center gap-2 rounded-xl bg-black/30 px-3 py-2 text-sm">
-          <Search size={16} />
-          <input
-            className="bg-transparent flex-1 outline-none"
-            value={q}
-            onChange={(e)=>setQ(e.target.value)}
-            placeholder="Buscar (ramen, sushi, vegan...)"
-          />
-        </div>
+          Imprescindibles
+        </button>
       </div>
 
-      {/* Sorpresa del día */}
-      {surprise && (
-        <div className="rounded-2xl border border-white/10 p-3">
-          <div className="text-xs text-white/60 mb-1">🎲 Sorpresa del día</div>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <div className="text-lg font-semibold">{surprise.name}</div>
-              <div className="text-sm text-white/60">
-                {surprise.city} • {surprise.area} • {surprise.cuisine} • {priceLabel(surprise.price)}
-              </div>
-            </div>
-            <a
-              className="rounded-xl bg-white text-black px-3 py-2 text-sm font-semibold"
-              href={surprise.gmaps}
-              target="_blank" rel="noreferrer"
+      {subtab === "imprescindibles" ? (
+        <GastroMustEat tripId={tripId} />
+      ) : (
+        <>
+          {/* Filtros de lugares */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+            <select
+              className="rounded-xl bg-black/30 px-3 py-2 text-sm"
+              value={city}
+              onChange={(e)=>{ setCity(e.target.value as any); setArea(""); }}
             >
-              <span className="inline-flex items-center gap-1"><MapPin size={16}/> Abrir en Maps</span>
-            </a>
-          </div>
-        </div>
-      )}
+              {cities.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
 
-      {/* Lista */}
-      <div className="space-y-3">
-        {filtered.map((p) => {
-          const c = counts[p.id];
-          return (
-            <div key={p.id} className="rounded-2xl bg-white/5 p-3">
+            <select
+              className="rounded-xl bg-black/30 px-3 py-2 text-sm"
+              value={area}
+              onChange={(e)=>setArea(e.target.value)}
+            >
+              {areas.map(a => <option key={a} value={a}>{a || "Todos los barrios"}</option>)}
+            </select>
+
+            <select
+              className="rounded-xl bg-black/30 px-3 py-2 text-sm"
+              value={price}
+              onChange={(e)=>setPrice(Number(e.target.value) as PriceLevel | 0)}
+            >
+              <option value={0}>Precio: todos</option>
+              <option value={1}>€</option>
+              <option value={2}>€€</option>
+              <option value={3}>€€€</option>
+              <option value={4}>€€€€</option>
+            </select>
+
+            <label className="flex items-center gap-2 rounded-xl bg-black/30 px-3 py-2 text-sm cursor-pointer">
+              <input type="checkbox" checked={onlyNoResv} onChange={(e)=>setOnlyNoResv(e.target.checked)} />
+              Sin reserva
+            </label>
+
+            <div className="flex items-center gap-2 rounded-xl bg-black/30 px-3 py-2 text-sm">
+              <Search size={16} />
+              <input
+                className="bg-transparent flex-1 outline-none"
+                value={q}
+                onChange={(e)=>setQ(e.target.value)}
+                placeholder="Buscar (ramen, sushi, vegan...)"
+              />
+            </div>
+          </div>
+
+          {/* Sorpresa del día */}
+          {surprise && (
+            <div className="rounded-2xl border border-white/10 p-3">
+              <div className="text-xs text-white/60 mb-1">🎲 Sorpresa del día</div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <div className="font-semibold">{p.name}</div>
-                  <div className="text-xs text-white/60">
-                    {p.city} • {p.area} • {p.cuisine} • {priceLabel(p.price)} {p.noReservation ? "• sin reserva" : ""}
-                    {p.tags?.length ? ` • ${p.tags.join(", ")}` : ""}
+                  <div className="text-lg font-semibold">{surprise.name}</div>
+                  <div className="text-sm text-white/60">
+                    {surprise.city} • {surprise.area} • {surprise.cuisine} • {priceLabel(surprise.price)}
                   </div>
-                  {p.hours && <div className="text-xs text-white/50 mt-1">🕒 {p.hours}</div>}
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={()=>toggleVote(p)}
-                    className={`rounded-full px-3 py-1 text-sm flex items-center gap-1 ${c?.myVote ? "bg-white text-black" : "bg-white/10"}`}
-                    title="Votar"
-                  >
-                    <ThumbsUp size={14}/> {c?.votes ?? 0}
-                  </button>
-                  <button
-                    onClick={()=>toggleFav(p)}
-                    className={`rounded-full px-3 py-1 text-sm flex items-center gap-1 ${c?.myFav ? "bg-white text-black" : "bg-white/10"}`}
-                    title="Favorito"
-                  >
-                    <Heart size={14}/> {c?.favs ?? 0}
-                  </button>
-                  <a
-                    className="rounded-full px-3 py-1 text-sm bg-white text-black flex items-center gap-1"
-                    href={p.gmaps} target="_blank" rel="noreferrer" title="Abrir en Google Maps"
-                  >
-                    <MapPin size={14}/> Mapa
-                  </a>
-                </div>
+                <a
+                  className="rounded-xl bg-white text-black px-3 py-2 text-sm font-semibold"
+                  href={surprise.gmaps}
+                  target="_blank" rel="noreferrer"
+                >
+                  <span className="inline-flex items-center gap-1"><MapPin size={16}/> Abrir en Maps</span>
+                </a>
               </div>
             </div>
-          );
-        })}
+          )}
 
-        {filtered.length === 0 && (
-          <div className="text-sm text-white/60">Sin resultados con esos filtros.</div>
-        )}
-      </div>
+          {/* Lista de lugares */}
+          <div className="space-y-3">
+            {filtered.map((p) => {
+              const c = counts[p.id];
+              return (
+                <div key={p.id} className="rounded-2xl bg-white/5 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <div className="font-semibold">{p.name}</div>
+                      <div className="text-xs text-white/60">
+                        {p.city} • {p.area} • {p.cuisine} • {priceLabel(p.price)} {p.noReservation ? "• sin reserva" : ""}
+                        {p.tags?.length ? ` • ${p.tags.join(", ")}` : ""}
+                      </div>
+                      {p.hours && <div className="text-xs text-white/50 mt-1">🕒 {p.hours}</div>}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={()=>toggleVote(p)}
+                        className={`rounded-full px-3 py-1 text-sm flex items-center gap-1 ${c?.myVote ? "bg-white text-black" : "bg-white/10"}`}
+                        title="Votar"
+                      >
+                        <ThumbsUp size={14}/> {c?.votes ?? 0}
+                      </button>
+                      <button
+                        onClick={()=>toggleFav(p)}
+                        className={`rounded-full px-3 py-1 text-sm flex items-center gap-1 ${c?.myFav ? "bg-white text-black" : "bg-white/10"}`}
+                        title="Favorito"
+                      >
+                        <Heart size={14}/> {c?.favs ?? 0}
+                      </button>
+                      <a
+                        className="rounded-full px-3 py-1 text-sm bg-white text-black flex items-center gap-1"
+                        href={p.gmaps} target="_blank" rel="noreferrer" title="Abrir en Google Maps"
+                      >
+                        <MapPin size={14}/> Mapa
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {filtered.length === 0 && (
+              <div className="text-sm text-white/60">Sin resultados con esos filtros.</div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
