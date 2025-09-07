@@ -668,57 +668,172 @@ const DEFAULT_CHECK_ITEMS = [
   "💳 Tarjeta sin comisiones activada + PIN recordado",
 ] as const;
 
- const slug = (s: string) => s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
- type CheckItem = { id: string; label: string; done: boolean };
- function loadChecklist(name: string): CheckItem[] { try { const raw = localStorage.getItem("jp_checklist_" + slug(name) + "_v1"); if (raw) return JSON.parse(raw); } catch { } return DEFAULT_CHECK_ITEMS.map((label, i) => ({ id: String(i), label, done: false })); }
- function saveChecklist(name: string, items: CheckItem[]) { try { localStorage.setItem("jp_checklist_" + slug(name) + "_v1", JSON.stringify(items)); } catch { } }
- function ChecklistSection() {
+// slug igual que antes
+const slug = (s: string) =>
+  s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+
+type CheckItem = { id: string; label: string; done: boolean };
+
+// ── Versión del checklist (cámbiala a "v3" si amplías el default en el futuro)
+const CHECK_VERSION = "v2";
+const KEY     = (name: string) => `jp_checklist_${slug(name)}_${CHECK_VERSION}`;
+const OLD_KEY = (name: string) => `jp_checklist_${slug(name)}_v1`;
+
+// Construye la lista base desde DEFAULT_CHECK_ITEMS, respetando "done" por etiqueta si existía
+function freshFromDefaults(existing?: CheckItem[]): CheckItem[] {
+  const doneByLabel = new globalThis.Map<string, boolean>();
+  (existing || []).forEach(i => doneByLabel.set(i.label, !!i.done));
+
+  const base = DEFAULT_CHECK_ITEMS.map((label, i) => ({
+    id: String(i),
+    label,
+    done: doneByLabel.get(label) ?? false,
+  }));
+
+  // Añade ítems personalizados del usuario que no estén en el default
+  const extras = (existing || []).filter(i => !DEFAULT_CHECK_ITEMS.includes(i.label as any));
+  return [...base, ...extras];
+}
+
+
+function loadChecklist(name: string): CheckItem[] {
+  try {
+    // v2 ya guardado
+    const raw = localStorage.getItem(KEY(name));
+    if (raw) {
+      const parsed: CheckItem[] = JSON.parse(raw);
+      // por si añadiste nuevos ítems al default, fusiona con lo guardado
+      const merged = freshFromDefaults(parsed);
+      if (merged.length !== parsed.length) localStorage.setItem(KEY(name), JSON.stringify(merged));
+      return merged;
+    }
+
+    // Migración automática desde v1 → v2
+    const old = localStorage.getItem(OLD_KEY(name));
+    if (old) {
+      const migrated = freshFromDefaults(JSON.parse(old));
+      localStorage.setItem(KEY(name), JSON.stringify(migrated));
+      return migrated;
+    }
+  } catch {}
+
+  // Primera vez: default puro (todo en false)
+  return freshFromDefaults();
+}
+
+function saveChecklist(name: string, items: CheckItem[]) {
+  try {
+    localStorage.setItem(KEY(name), JSON.stringify(items));
+  } catch {}
+}
+
+function ChecklistSection() {
   const [person, setPerson] = useState<typeof TRAVELLERS[number]>(TRAVELLERS[0]);
   const [items, setItems] = useState<CheckItem[]>(() => loadChecklist(TRAVELLERS[0]));
   const [newItem, setNewItem] = useState("");
+
   useEffect(() => { setItems(loadChecklist(person)); }, [person]);
   useEffect(() => { saveChecklist(person, items); }, [person, items]);
-  const toggle = (id: string) => setItems(arr => arr.map(x => x.id === id ? { ...x, done: !x.done } : x));
-  const add = () => { const label = newItem.trim(); if (!label) return; setItems(arr => [{ id: `c${Date.now()}`, label, done: false }, ...arr]); setNewItem(""); };
-  const markAll = () => setItems(arr => arr.map(x => ({ ...x, done: true })));
-  const reset = () => setItems(DEFAULT_CHECK_ITEMS.map((label, i) => ({ id: String(i), label, done: false })));
-  const doneCount = items.filter(i => i.done).length; const total = items.length || 1; const pct = Math.round((doneCount / total) * 100);
-  const pending = items.filter(i => !i.done).map(i => "• " + i.label); const summary = lines(`Checklist de ${person}`, `${doneCount}/${items.length} completados`, pending.length ? "Pendiente:" : "Todo listo ✅", ...pending);
-  const share = async () => { try { if (navigator.share) { await navigator.share({ title: `Checklist de ${person}`, text: summary }); return; } } catch { } try { await navigator.clipboard.writeText(summary); alert("Checklist copiada ✨"); } catch { } };
+
+  const toggle   = (id: string) => setItems(arr => arr.map(x => x.id === id ? { ...x, done: !x.done } : x));
+  const add      = () => {
+    const label = newItem.trim();
+    if (!label) return;
+    setItems(arr => [{ id: `u${Date.now()}`, label, done: false }, ...arr]);
+    setNewItem("");
+  };
+  const markAll  = () => setItems(arr => arr.map(x => ({ ...x, done: true })));
+  const reset    = () => setItems(freshFromDefaults()); // vuelve al default actualizado
+
+  const doneCount = items.filter(i => i.done).length;
+  const total     = items.length || 1;
+  const pct       = Math.round((doneCount / total) * 100);
+  const pending   = items.filter(i => !i.done).map(i => "• " + i.label);
+  const summary   = lines(
+    `Checklist de ${person}`,
+    `${doneCount}/${items.length} completados`,
+    pending.length ? "Pendiente:" : "Todo listo ✅",
+    ...pending
+  );
+
+  const share = async () => {
+    try {
+      if (navigator.share) { await navigator.share({ title: `Checklist de ${person}`, text: summary }); return; }
+    } catch {}
+    try { await navigator.clipboard.writeText(summary); alert("Checklist copiada ✨"); } catch {}
+  };
+
   return (
     <SectionCard title="Checklist personal" subtitle="Marca lo que ya tienes listo · por viajero">
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <ListChecks size={18} />
-          <select value={person} onChange={e => setPerson(e.target.value as any)} className="rounded-xl px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm">
+          <select
+            value={person}
+            onChange={e => setPerson(e.target.value as any)}
+            className="rounded-xl px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm"
+          >
             {TRAVELLERS.map(n => <option key={n} value={n}>{n}</option>)}
           </select>
           <div className="ml-auto text-xs text-zinc-500 dark:text-zinc-400">{pct}%</div>
         </div>
-        <div className="w-full h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden"><div className="h-full bg-zinc-900 dark:bg-zinc-100" style={{ width: `${pct}%` }} /></div>
-        <div className="grid grid-cols-3 gap-2">
-          <input value={newItem} onChange={e => setNewItem(e.target.value)} placeholder="Añadir ítem…" className="col-span-2 rounded-xl px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm" />
-          <button onClick={add} className="text-sm px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Añadir</button>
+
+        <div className="w-full h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+          <div className="h-full bg-zinc-900 dark:bg-zinc-100" style={{ width: `${pct}%` }} />
         </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          <input
+            value={newItem}
+            onChange={e => setNewItem(e.target.value)}
+            placeholder="Añadir ítem…"
+            className="col-span-2 rounded-xl px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm"
+          />
+          <button onClick={add} className="text-sm px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+            Añadir
+          </button>
+        </div>
+
         <ul className="divide-y divide-zinc-100 dark:divide-zinc-800 rounded-xl border border-zinc-100 dark:border-zinc-800 overflow-hidden">
           {items.map(i => (
             <li key={i.id} className="flex items-center gap-3 p-3 bg-white/60 dark:bg-zinc-900/40">
-              <input type="checkbox" checked={i.done} onChange={() => toggle(i.id)} className="w-5 h-5 rounded-md border-zinc-300 dark:border-zinc-700" />
-              <div className={`flex-1 text-sm ${i.done ? "line-through text-zinc-400 dark:text-zinc-500" : ""}`}>{i.label}</div>
+              <input
+                type="checkbox"
+                checked={i.done}
+                onChange={() => toggle(i.id)}
+                className="w-5 h-5 rounded-md border-zinc-300 dark:border-zinc-700"
+              />
+              <div className={`flex-1 text-sm ${i.done ? "line-through text-zinc-400 dark:text-zinc-500" : ""}`}>
+                {i.label}
+              </div>
             </li>
           ))}
         </ul>
+
         <div className="flex items-center gap-2 pt-1">
           <button onClick={markAll} className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Marcar todo</button>
-          <button onClick={reset} className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Reset</button>
-          <button onClick={share} className="ml-auto text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Compartir</button>
-          <a href={`https://api.whatsapp.com/send?text=${encodeURIComponent(summary)}`} target="_blank" rel="noreferrer" className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">WhatsApp</a>
-          <button onClick={() => navigator.clipboard.writeText(summary)} className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Copiar</button>
+          <button onClick={reset}   className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Reset</button>
+          <button onClick={share}   className="ml-auto text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Compartir</button>
+          <a
+            href={`https://api.whatsapp.com/send?text=${encodeURIComponent(summary)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          >
+            WhatsApp
+          </a>
+          <button
+            onClick={() => navigator.clipboard.writeText(summary)}
+            className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          >
+            Copiar
+          </button>
         </div>
       </div>
     </SectionCard>
   );
- }
+}
+
 
 // Sustituye TODO el array FACTS por este:
 const FACTS = [
