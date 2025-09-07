@@ -31,6 +31,9 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import PhotoGallery from "./components/PhotoGallery";
 import MapDayButton from "./components/MapDayButton";
+import NotesLite from "./components/NotesLite";
+import { makeBlockId } from "./utils/slug";
+
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Utilidades
@@ -222,23 +225,76 @@ function DayCard({ day, done, toggle, setAll, clearAll, defaultOpen }: { day: Da
 }
 
 function Itinerary() {
-  const [done, setDone] = useState<Record<string, boolean>>(() => { try { return JSON.parse(localStorage.getItem("jp_done_v1") || "{}"); } catch { return {}; } });
-  useEffect(() => { try { localStorage.setItem("jp_done_v1", JSON.stringify(done)); } catch {} }, [done]);
+  const [done, setDone] = useState<Record<string, boolean>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("jp_done_v1") || "{}");
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("jp_done_v1", JSON.stringify(done));
+    } catch {}
+  }, [done]);
+
   const todayISO = new Date().toISOString().slice(0, 10);
+
   return (
     <div className="space-y-4">
-      <SectionCard title="Itinerario 🇯🇵" subtitle="20 oct → 4 nov 2025"><TripMeta /></SectionCard>
+      <SectionCard title="Itinerario 🇯🇵" subtitle="20 oct → 4 nov 2025">
+        <TripMeta />
+      </SectionCard>
+
       <div className="space-y-6">
-        {ITINERARY.map(day => {
-          const toggle = (id: string) => setDone(d => ({ ...d, [id]: !d[id] }));
-          const setAll = () => setDone(d0 => { const c = { ...d0 } as Record<string, boolean>; day.activities.forEach((_a, i) => { c[`${day.date}-${i}`] = true; }); return c; });
-          const clearAll = () => setDone(d0 => { const c = { ...d0 } as Record<string, boolean>; day.activities.forEach((_a, i) => { delete c[`${day.date}-${i}`]; }); return c; });
-          return <DayCard key={day.date} day={day} done={done} toggle={toggle} setAll={setAll} clearAll={clearAll} defaultOpen={day.date === todayISO} />
+        {ITINERARY.map((day) => {
+          const toggle = (id: string) =>
+            setDone((d) => ({ ...d, [id]: !d[id] }));
+
+          const setAll = () =>
+            setDone((d0) => {
+              const c = { ...d0 } as Record<string, boolean>;
+              day.activities.forEach((_a, i) => {
+                c[`${day.date}-${i}`] = true;
+              });
+              return c;
+            });
+
+          const clearAll = () =>
+            setDone((d0) => {
+              const c = { ...d0 } as Record<string, boolean>;
+              day.activities.forEach((_a, i) => {
+                delete c[`${day.date}-${i}`];
+              });
+              return c;
+            });
+
+          return (
+            <div key={day.date} className="space-y-3">
+              <DayCard
+                day={day}
+                done={done}
+                toggle={toggle}
+                setAll={setAll}
+                clearAll={clearAll}
+                defaultOpen={day.date === todayISO}
+              />
+
+              {/* 👇 Panel de notas para cada día (global y automático) */}
+              <NotesLite
+                tripId="japon-2025"
+                blockId={makeBlockId(day.date, day.city)}
+                className="mt-2"
+              />
+            </div>
+          );
         })}
       </div>
     </div>
   );
 }
+
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Bloque 3: Info práctica
