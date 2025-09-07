@@ -86,10 +86,12 @@ function useTheme() {
 
 function SectionCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm">
+    <div className="rounded-2xl p-4 shadow-sm
+                    bg-white border border-zinc-200
+                    dark:bg-[var(--card-bg)] dark:border-[var(--card-border)]">
       <div className="mb-2">
-        <h3 className="text-base font-semibold leading-tight">{title}</h3>
-        {subtitle && <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{subtitle}</p>}
+        <h3 className="text-[17px] font-semibold leading-tight">{title}</h3>
+        {subtitle && <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-1">{subtitle}</p>}
       </div>
       {children}
     </div>
@@ -208,26 +210,68 @@ function DayCard({
       <div className="absolute left-5 top-0 bottom-0 w-[2px] bg-zinc-200 dark:bg-zinc-800" />
       <div className="pl-10">
         <div className="relative mb-3">
-          <div className={`absolute -left-[11px] top-2 w-5 h-5 rounded-full border-2 ${isToday ? "border-emerald-500" : isPast ? "border-zinc-400 dark:border-zinc-600" : "border-zinc-300 dark:border-zinc-700"} bg-white dark:bg-zinc-900`} />
+          <div className={`absolute -left-[11px] top-2 w-5 h-5 rounded-full border-2 ${
+            isToday ? "border-emerald-500" :
+            isPast  ? "border-zinc-400 dark:border-zinc-600" :
+                      "border-zinc-300 dark:border-zinc-700"
+          } bg-white dark:bg-zinc-900`} />
+
           <SectionCard title="" subtitle="">
             <div className="space-y-3">
-              <DayHeader dateISO={day.date} city={day.city} emoji={day.emoji} isToday={isToday} isPast={isPast} />
+              <DayHeader
+                dateISO={day.date}
+                city={day.city}
+                emoji={day.emoji}
+                isToday={isToday}
+                isPast={isPast}
+              />
+
               <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2"><CheckCircle size={16} /><span>{completed}/{total} hechas</span></div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle size={16} />
+                  <span>{completed}/{total} hechas</span>
+                </div>
                 <div className="text-xs text-zinc-500 dark:text-zinc-400">{pct}%</div>
               </div>
-              <div className="w-full h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden"><div className="h-full bg-zinc-900 dark:bg-zinc-100" style={{ width: `${pct}%` }} /></div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setOpen(!open)} className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-1">
-                  <ChevronDown size={16} className={`${open ? "rotate-180" : ""} transition-transform`} />{open ? "Ocultar" : "Ver actividades"}
-                </button>
-                <button onClick={setAll}   className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Marcar todo</button>
-                <button onClick={clearAll} className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Reset</button>
 
-                <MapDayButton
-                  day={day}
-                  places={PLACES.map(p => ({ name: p.name, gmaps: p.links.gmaps }))}
-                />
+              <div className="w-full h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                <div className="h-full bg-zinc-900 dark:bg-zinc-100" style={{ width: `${pct}%` }} />
+              </div>
+
+              {/* ⬇️ Toolbar con wrap y botones más compactos en móvil */}
+              <div className="flex flex-wrap items-center gap-2 gap-y-2">
+                <button
+                  onClick={() => setOpen(!open)}
+                  className="text-[13px] sm:text-sm px-3 py-1.5 leading-tight rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-1"
+                >
+                  <ChevronDown
+                    size={16}
+                    className={`${open ? "rotate-180" : ""} transition-transform`}
+                  />
+                  {open ? "Ocultar" : "Ver actividades"}
+                </button>
+
+                <button
+                  onClick={setAll}
+                  className="text-[13px] sm:text-sm px-3 py-1.5 leading-tight rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                >
+                  Marcar todo
+                </button>
+
+                <button
+                  onClick={clearAll}
+                  className="text-[13px] sm:text-sm px-3 py-1.5 leading-tight rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                >
+                  Reset
+                </button>
+
+                {/* Contenedor para que "Mapa del día" pueda partir en 2 líneas */}
+                <div className="min-w-[130px] max-w-full">
+                  <MapDayButton
+                    day={day}
+                    places={PLACES.map(p => ({ name: p.name, gmaps: p.links.gmaps }))}
+                  />
+                </div>
               </div>
 
               {open && (
@@ -237,9 +281,18 @@ function DayCard({
                     const checked = !!done[id];
                     return (
                       <li key={id} className="flex items-center gap-3 p-3 bg-white/60 dark:bg-zinc-900/40">
-                        <input type="checkbox" checked={checked} onChange={() => toggle(id)} className="w-5 h-5 rounded-md border-zinc-300 dark:border-zinc-700" />
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggle(id)}
+                          className="w-5 h-5 rounded-md border-zinc-300 dark:border-zinc-700"
+                        />
                         <div className="flex-1 text-sm">
-                          {a.time && <span className="text-zinc-500 dark:text-zinc-400 mr-2">{a.time}</span>}
+                          {a.time && (
+                            <span className="text-zinc-500 dark:text-zinc-400 mr-2">
+                              {a.time}
+                            </span>
+                          )}
                           <span>{a.text}</span>
                         </div>
                       </li>
@@ -251,7 +304,10 @@ function DayCard({
 
             {/* Galería de fotos del día */}
             <div className="mt-2">
-              <PhotoGallery placeId={`day-${day.date}`} placeName={`Fotos de ${day.city}`} />
+              <PhotoGallery
+                placeId={`day-${day.date}`}
+                placeName={`Fotos de ${day.city}`}
+              />
             </div>
           </SectionCard>
         </div>
@@ -259,6 +315,7 @@ function DayCard({
     </div>
   );
 }
+
 
 function Itinerary() {
   const [done, setDone] = useState<Record<string, boolean>>(() => {
@@ -973,7 +1030,7 @@ export default function JapanTripApp() {
           </div>
         </header>
 
-        <main className="max-w-md mx-auto px-4 pt-4 pb-24">
+        <main className="max-w-md mx-auto px-4 pt-4 pb-24 text-[15px] md:text-base">
           <AnimatePresence mode="wait">
             <motion.div
               key={tab}
