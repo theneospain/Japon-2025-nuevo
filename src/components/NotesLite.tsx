@@ -27,7 +27,8 @@ type Note = {
   createdAt?: { seconds: number; nanoseconds: number } | null;
   reactions?: Record<string, string[]>;
   deviceId?: string;
-  localOnly?: boolean; // solo para visualizar pendientes en local
+  localOnly?: boolean;
+  hidden?: boolean; // soft delete
 };
 
 const NAME_KEY = "notes_name";
@@ -56,44 +57,43 @@ export default function NotesLite({ tripId, blockId, className }: Props) {
     [tripId, blockId]
   );
 
-  // Clave para guardar pendientes si falla Firestore
+  // clave de cola local por bloque
   const PENDING_KEY = useMemo(
     () => `notes_pending_${tripId}_${blockId}`,
     [tripId, blockId]
   );
 
   useEffect(() => {
-    localStorage.setItem(NAME_KEY, name.trim() || "Invitado");
+    localStorage.setItem(NAME_KEY, (name || "Invitado").trim());
   }, [name]);
 
-  // Reintentar envío de notas pendientes al montar/cambiar bloque
+  // Reintento automático de la cola local al cargar el bloque
   useEffect(() => {
     (async () => {
-      const raw = localStorage.getItem(PENDING_KEY);
-      if (!raw) return;
       try {
-        const pend: Array<Omit<Note, "id">> = JSON.parse(raw);
+        const raw = localStorage.getItem(PENDING_KEY);
+        const pend: Array<Omit<Note, "id">> = raw ? JSON.parse(raw) : [];
         if (Array.isArray(pend) && pend.length) {
           for (const n of pend) {
-            // Enviamos de nuevo con timestamp del servidor
             await addDoc(notesRef, {
               content: n.content,
               authorName: n.authorName,
               createdAt: serverTimestamp(),
               reactions: n.reactions || { "👍": [], "❤️": [], "🍜": [] },
               deviceId: n.deviceId || deviceId,
+              hidden: n.hidden ?? false,
             });
           }
           localStorage.removeItem(PENDING_KEY);
         }
       } catch {
-        // si falla, dejamos la cola tal cual
+        // si falla, dejamos la cola para más tarde
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [PENDING_KEY, notesRef]);
 
-  // Suscripción a las notas (y añadimos las pendientes locales si las hubiera)
+  // Suscripción a Firestore (y añadimos notas locales pendientes visibles)
   useEffect(() => {
     setError(null);
     const q = query(notesRef, orderBy("createdAt", "asc"), limit(400));
@@ -101,25 +101,31 @@ export default function NotesLite({ tripId, blockId, className }: Props) {
       q,
       (snap) => {
         const arr: Note[] = [];
-        snap.forEach((d) => arr.push({ id: d.id, ...(d.data() as Omit<Note, "id">) }));
+        snap.forEach((d) =>
+          arr.push({ id: d.id, ...(d.data() as Omit<Note, "id">) })
+        );
+        // Filtrar ocultas (soft delete)
+        const visible = arr.filter((n) => !n.hidden);
 
-        // Añadir visualmente las pendientes locales (si existen)
+        // Añadir visualmente las pendientes locales (si las hay)
         try {
           const raw = localStorage.getItem(PENDING_KEY);
-          const pend: Array<Omit<Note, "id">> = raw ? JSON.parse(raw) : [];
+          const pend: Array<Omit<Note, "id">>> = raw ? JSON.parse(raw) : [];
           if (Array.isArray(pend) && pend.length) {
             const locals: Note[] = pend.map((n, i) => ({
               id: `local-${i}`,
               ...n,
               localOnly: true,
-              createdAt: n.createdAt ?? { seconds: Date.now() / 1000, nanoseconds: 0 },
+              hidden: n.hidden ?? false,
+              createdAt:
+                n.createdAt ?? { seconds: Date.now() / 1000, nanoseconds: 0 },
             }));
-            setNotes([...arr, ...locals]);
+            setNotes([...visible, ...locals.filter((n) => !n.hidden)]);
           } else {
-            setNotes(arr);
+            setNotes(visible);
           }
         } catch {
-          setNotes(arr);
+          setNotes(visible);
         }
       },
       (err) => {
@@ -130,7 +136,7 @@ export default function NotesLite({ tripId, blockId, className }: Props) {
     return unsub;
   }, [notesRef, PENDING_KEY]);
 
-  // Auto-crecer textarea
+  // Autogrow del textarea
   useEffect(() => {
     const el = areaRef.current;
     if (!el) return;
@@ -138,23 +144,38 @@ export default function NotesLite({ tripId, blockId, className }: Props) {
     el.style.height = Math.min(el.scrollHeight, 200) + "px";
   }, [input]);
 
+  function fmtDate(n: Note) {
+    const d = n.createdAt?.seconds
+      ? new Date(n.createdAt.seconds * 1000)
+      : new Date();
+    return d.toLocaleString("es-ES", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
   function queuePending(payload: Omit<Note, "id">) {
     try {
-      const arr: Array<Omit<Note, "id">> = JSON.parse(localStorage.getItem(PENDING_KEY) || "[]");
+      const arr: Array<Omit<Note, "id">> = JSON.parse(
+        localStorage.getItem(PENDING_KEY) || "[]"
+      );
       arr.push(payload);
       localStorage.setItem(PENDING_KEY, JSON.stringify(arr));
-      // mostrar también en pantalla
+      // Pintamos también en UI
       setNotes((prev) => [
         ...prev,
         {
           id: `local-${Date.now()}`,
           ...payload,
           localOnly: true,
-          createdAt: payload.createdAt ?? { seconds: Date.now() / 1000, nanoseconds: 0 },
+          createdAt:
+            payload.createdAt ?? { seconds: Date.now() / 1000, nanoseconds: 0 },
         },
       ]);
     } catch {
-      // ignoramos errores de almacenamiento local
+      // ignorar errores de localStorage
     }
   }
 
@@ -177,19 +198,21 @@ export default function NotesLite({ tripId, blockId, className }: Props) {
         createdAt: serverTimestamp(),
         reactions: { "👍": [], "❤️": [], "🍜": [] },
         deviceId,
+        hidden: false,
       });
       setInput("");
       areaRef.current?.focus();
-    } catch (e: any) {
+    } catch (e) {
       console.error("[Notes] addDoc error", e);
       setError("No se pudo guardar ahora. Se intentará automáticamente.");
-      // Guardar en cola local para reintentar
+      // Guardar en cola local
       queuePending({
         content,
         authorName: author,
         createdAt: { seconds: Date.now() / 1000, nanoseconds: 0 },
         reactions: { "👍": [], "❤️": [], "🍜": [] },
         deviceId,
+        hidden: false,
         localOnly: true,
       });
       setInput("");
@@ -211,15 +234,39 @@ export default function NotesLite({ tripId, blockId, className }: Props) {
     }
   }
 
-  function fmtDate(n: Note) {
-    const d = n.createdAt?.seconds ? new Date(n.createdAt.seconds * 1000) : new Date();
-    return d.toLocaleString("es-ES", {
-      day: "2-digit",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  async function deleteNote(n: Note) {
+    // Si aún está en cola local, bórrala del localStorage y de la UI
+    if (n.localOnly) {
+      try {
+        const raw = localStorage.getItem(PENDING_KEY) || "[]";
+        const pend: any[] = JSON.parse(raw);
+        const idx = pend.findIndex(
+          (x) =>
+            x.content === n.content &&
+            x.authorName === n.authorName &&
+            (x.deviceId || deviceId) === (n.deviceId || deviceId)
+        );
+        if (idx !== -1) {
+          pend.splice(idx, 1);
+          localStorage.setItem(PENDING_KEY, JSON.stringify(pend));
+        }
+      } catch {}
+      setNotes((prev) => prev.filter((x) => x.id !== n.id));
+      return;
+    }
+
+    // Seguridad básica en cliente: solo el “dueño” del dispositivo puede borrar
+    if (n.deviceId !== deviceId) return;
+
+    try {
+      await updateDoc(doc(notesRef, n.id), { hidden: true });
+    } catch (e) {
+      console.error("[Notes] delete error", e);
+      setError("No se pudo borrar la nota.");
+    }
   }
+
+  const EMOJIS = ["👍", "❤️", "🍜"];
 
   return (
     <div className={`rounded-2xl border border-white/10 p-3 ${className || ""}`}>
@@ -234,38 +281,49 @@ export default function NotesLite({ tripId, blockId, className }: Props) {
         {notes.length === 0 && (
           <div className="text-sm text-white/50">Sé el primero en dejar una nota 👍🏽</div>
         )}
-        {notes.map((n) => {
-          const emojis = ["👍", "❤️", "🍜"];
-          return (
-            <div key={n.id} className="rounded-xl bg-white/5 px-3 py-2 text-sm">
-              <div className="flex items-center justify-between">
-                <div className="font-semibold">{n.authorName}</div>
+
+        {notes.map((n) => (
+          <div key={n.id} className="rounded-xl bg-white/5 px-3 py-2 text-sm">
+            <div className="flex items-center justify-between">
+              <div className="font-semibold">{n.authorName}</div>
+              <div className="flex items-center gap-3">
                 <div className="text-xs text-white/50">
                   {fmtDate(n)}
                   {n.localOnly && " • local"}
                 </div>
-              </div>
-              <div className="mt-1 whitespace-pre-wrap">{n.content}</div>
-              <div className="mt-2 flex gap-2 text-xs">
-                {emojis.map((e) => {
-                  const users = n.reactions?.[e] || [];
-                  const active = users.includes(deviceId);
-                  return (
-                    <button
-                      key={e}
-                      onClick={() => toggleReaction(n.id, e)}
-                      className={`rounded-full px-2 py-1 ${
-                        active ? "bg-white text-black" : "bg-white/10"
-                      }`}
-                    >
-                      {e} {users.length || ""}
-                    </button>
-                  );
-                })}
+                {(n.deviceId === deviceId || n.localOnly) && (
+                  <button
+                    onClick={() => deleteNote(n)}
+                    className="text-xs text-red-300 hover:text-red-400"
+                    title="Borrar mi nota"
+                  >
+                    🗑️ Borrar
+                  </button>
+                )}
               </div>
             </div>
-          );
-        })}
+
+            <div className="mt-1 whitespace-pre-wrap">{n.content}</div>
+
+            <div className="mt-2 flex gap-2 text-xs">
+              {EMOJIS.map((e) => {
+                const users = n.reactions?.[e] || [];
+                const active = users.includes(deviceId);
+                return (
+                  <button
+                    key={e}
+                    onClick={() => toggleReaction(n.id, e)}
+                    className={`rounded-full px-2 py-1 ${
+                      active ? "bg-white text-black" : "bg-white/10"
+                    }`}
+                  >
+                    {e} {users.length || ""}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="mt-3 flex items-end gap-2">
