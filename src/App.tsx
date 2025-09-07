@@ -34,6 +34,8 @@ import MapDayButton from "./components/MapDayButton";
 import NotesLite from "./components/NotesLite";
 import { makeBlockId } from "./utils/slug";
 import Gastro from "./components/Gastro";
+import { Camera /* …ya tienes más iconos aquí */ } from "lucide-react";
+import PhotoIdeas from "./components/PhotoIdeas";
 
 
 
@@ -58,6 +60,9 @@ const TABS = [
   { key: "expenses",  label: "Gastos",        icon: Wallet,      emoji: "💶" },
   // 👇 Nueva pestaña
   { key: "gastro",    label: "Gastronomía",   icon: Utensils,    emoji: "🍣" },
+  // añade al array:
+{ key: "photo", label: "Ideas foto", icon: Camera, emoji: "📷" },
+
 ] as const;
 
 type TabKey = typeof TABS[number]["key"];
@@ -916,6 +921,16 @@ const FACTS = [
 export default function JapanTripApp() {
   const { theme, setTheme } = useTheme();
   const [tab, setTab] = useState<TabKey>("itinerary");
+
+  // 👉 Normalizamos TABS aquí para evitar el error "never"
+  type TabLike = {
+    key: TabKey;
+    label: string;
+    icon: React.ComponentType<{ size?: number }>;
+    emoji?: string;
+  };
+  const tabs = (TABS as unknown as TabLike[]);
+
   useEffect(() => {
     // Smoke tests básicos (no rompen la UI)
     try {
@@ -929,46 +944,105 @@ export default function JapanTripApp() {
       console.assert(PLACES.length >= 5, "Hay lugares");
     } catch {}
   }, []);
+
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
+  const currentTab = tabs.find(t => t.key === tab);
+
   return (
     <div className={theme === "dark" ? "dark" : ""}>
       <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 transition-colors duration-300">
+
         <header className="sticky top-0 z-40 backdrop-blur bg-white/70 dark:bg-zinc-900/70 border-b border-zinc-200 dark:border-zinc-800">
           <div className="max-w-md mx-auto flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-2"><span className="text-2xl">🇯🇵</span><h1 className="text-lg font-semibold leading-tight">Viaje Japón 2025</h1></div>
-            <button onClick={toggleTheme} className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200/70 dark:hover:bg-zinc-700/70 transition-colors" aria-label="Cambiar tema">{theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}</button>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🇯🇵</span>
+              <h1 className="text-lg font-semibold leading-tight">Viaje Japón 2025</h1>
+              {/* Píldora con el tab activo */}
+              <span className="ml-2 text-[11px] px-2 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300">
+                {currentTab?.emoji} {currentTab?.label}
+              </span>
+            </div>
+
+            <button
+              onClick={toggleTheme}
+              className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200/70 dark:hover:bg-zinc-700/70 transition-colors"
+              aria-label="Cambiar tema"
+            >
+              {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
           </div>
         </header>
-        <main className="max-w-md mx-auto px-4 pt-4 pb-24">
-          <AnimatePresence mode="wait"><motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }} className="space-y-4">
-            {tab === "itinerary" && <Itinerary />}
-            {tab === "info" && <InfoPractical />}
-            {tab === "places" && <PlacesSection />}
-            {tab === "expenses" && <ExpensesSection />}
-            {tab === "gastro" && (
-  <section id="gastro">
-    <SectionCard
-      title="Gastronomía 🍣"
-      subtitle="Listado por ciudad/barrio con filtros, votos y favoritos del grupo"
-    >
-      <Gastro tripId="japon-2025" />
-    </SectionCard>
-  </section>
-)}
 
-          </motion.div></AnimatePresence>
+        <main className="max-w-md mx-auto px-4 pt-4 pb-24">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18 }}
+              className="space-y-4"
+            >
+              {tab === "itinerary" && <Itinerary />}
+              {tab === "info" && <InfoPractical />}
+              {tab === "places" && <PlacesSection />}
+              {tab === "expenses" && <ExpensesSection />}
+
+              {/* GASTRONOMÍA */}
+              {tab === "gastro" && (
+                <section id="gastro">
+                  <SectionCard
+                    title="Gastronomía 🍣"
+                    subtitle="Listado por ciudad/barrio con filtros, votos y favoritos del grupo"
+                  >
+                    <Gastro tripId="japon-2025" />
+                  </SectionCard>
+                </section>
+              )}
+
+              {/* IDEAS FOTO */}
+              {tab === "photo" && (
+                <section id="photo">
+                  <SectionCard
+                    title="Ideas foto 📷"
+                    subtitle="Inspiración por ciudad/estilo · favoritos · ‘hechas’"
+                  >
+                    <PhotoIdeas />
+                  </SectionCard>
+                </section>
+              )}
+            </motion.div>
+          </AnimatePresence>
         </main>
+
         <nav className="fixed bottom-0 inset-x-0 z-40">
           <div className="max-w-md mx-auto px-4 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2">
-            <div className="grid grid-cols-4 gap-2 p-2 bg-white dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-lg">
-              {TABS.map(t => { const Icon = t.icon; const active = tab === t.key; return (
-                <button key={t.key} onClick={() => setTab(t.key)} className={`flex flex-col items-center justify-center gap-1 py-1 rounded-xl transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-600 ${active ? "bg-zinc-100 dark:bg-zinc-800" : "hover:bg-zinc-100/80 dark:hover:bg-zinc-800/70"}`} aria-current={active ? "page" : undefined} aria-label={t.label}>
-                  <Icon size={20} /><span className={`text-[11px] leading-none ${active ? "font-semibold" : "text-zinc-500 dark:text-zinc-400"}`}>{t.label}</span>
-                </button>
-              ); })}
+            {/* 6 pestañas */}
+            <div className="grid grid-cols-6 gap-2 p-2 bg-white dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-lg">
+              {tabs.map((t) => {
+                const Icon = t.icon;
+                const active = tab === t.key;
+                return (
+                  <button
+                    key={t.key}
+                    onClick={() => setTab(t.key)}
+                    className={`flex flex-col items-center justify-center gap-1 py-1 rounded-xl transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-600 ${
+                      active ? "bg-zinc-100 dark:bg-zinc-800" : "hover:bg-zinc-100/80 dark:hover:bg-zinc-800/70"
+                    }`}
+                    aria-current={active ? "page" : undefined}
+                    aria-label={t.label}
+                  >
+                    <Icon size={20} />
+                    <span className={`text-[11px] leading-none ${active ? "font-semibold" : "text-zinc-500 dark:text-zinc-400"}`}>
+                      {t.emoji ? `${t.emoji} ${t.label}` : t.label}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </nav>
+
       </div>
     </div>
   );
