@@ -1,7 +1,9 @@
 // src/components/GastroMustEat.tsx
 import { useEffect, useMemo, useState } from "react";
-import { MUST_EAT, MustEatItem } from "../data/mustEat";
+import { MUST_EAT } from "../data/mustEat";
 import { Copy } from "lucide-react";
+import { db } from "../lib/firebase";
+import { doc, setDoc, increment } from "firebase/firestore";
 
 function SectionCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
@@ -16,14 +18,24 @@ function SectionCard({ title, subtitle, children }: { title: string; subtitle?: 
 }
 
 type Props = { tripId: string; className?: string };
-
 type State = Record<string, true>; // ids marcados
+
+// 🔥 Suma puntos en Firebase
+async function addPoint(tripId: string, deviceId: string) {
+  try {
+    const ref = doc(db, "trips", tripId, "game", "scores", deviceId);
+    await setDoc(ref, { points: increment(1) }, { merge: true });
+  } catch (e) {
+    console.error("Error al sumar punto", e);
+  }
+}
 
 export default function GastroMustEat({ tripId, className }: Props) {
   const [city, setCity] = useState<"Osaka" | "Kyoto" | "Tokyo">("Osaka");
   const [gf, setGF] = useState(false);
   const [lf, setLF] = useState(false);
   const KEY = useMemo(() => `jp_musteat_${tripId}_${city}_v1`, [tripId, city]);
+  const deviceId = localStorage.getItem("notes_device_id") || "anon";
 
   const items = useMemo(
     () =>
@@ -36,7 +48,11 @@ export default function GastroMustEat({ tripId, className }: Props) {
   );
 
   const [checked, setChecked] = useState<State>(() => {
-    try { return JSON.parse(localStorage.getItem(`jp_musteat_${tripId}_Osaka_v1`) || "{}"); } catch { return {}; }
+    try {
+      return JSON.parse(localStorage.getItem(`jp_musteat_${tripId}_Osaka_v1`) || "{}");
+    } catch {
+      return {};
+    }
   });
 
   useEffect(() => {
@@ -49,11 +65,25 @@ export default function GastroMustEat({ tripId, className }: Props) {
   }, [KEY]);
 
   useEffect(() => {
-    try { localStorage.setItem(KEY, JSON.stringify(checked)); } catch {}
+    try {
+      localStorage.setItem(KEY, JSON.stringify(checked));
+    } catch {}
   }, [KEY, checked]);
 
-  const toggle = (id: string) =>
-    setChecked((s) => ({ ...s, [id]: s[id] ? (undefined as any) : true }));
+  // ✅ toggle ahora suma punto al marcar algo nuevo
+  const toggle = async (id: string) => {
+    setChecked((s) => {
+      const already = !!s[id];
+      const next = { ...s };
+      if (already) {
+        delete next[id];
+      } else {
+        next[id] = true;
+        addPoint(tripId, deviceId); // 👈 suma punto solo al marcar
+      }
+      return next;
+    });
+  };
 
   const markAll = () =>
     setChecked((s) => {
