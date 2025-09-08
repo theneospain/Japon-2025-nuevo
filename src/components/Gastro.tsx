@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Heart, ThumbsUp, MapPin, Search } from "lucide-react";
+import { Heart, ThumbsUp, MapPin, Search, CheckCircle } from "lucide-react";
 
 import { GASTRO_PLACES, GastroPlace, PriceLevel } from "../data/gastro";
 import GastroMustEat from "./GastroMustEat";
@@ -13,12 +13,18 @@ import {
   onSnapshot,
   setDoc,
   deleteDoc,
+  getDoc,
+  writeBatch,
+  serverTimestamp,
+  increment,
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 
 type Props = { tripId: string; className?: string };
 
 type Counts = { votes: number; favs: number; myVote: boolean; myFav: boolean };
+
+const NAME_KEY = "notes_name";
 
 function priceLabel(p: PriceLevel) {
   return "€".repeat(p);
@@ -49,6 +55,7 @@ export default function Gastro({ tripId, className }: Props) {
   const deviceId = useMemo(() => getDeviceId(), []);
   const todaySeed = useMemo(() => new Date().toLocaleDateString("en-CA"), []);
   const [subtab, setSubtab] = useState<Subtab>("lugares");
+  const [name, setName] = useState<string>(() => localStorage.getItem(NAME_KEY) || "Invitado");
 
   // ────────────────────────────────────────────────────────────────────────────
   // LUGARES (votos, favs, filtros por ciudad/barrio/precio/sin reserva)
@@ -58,9 +65,10 @@ export default function Gastro({ tripId, className }: Props) {
   const [q, setQ] = useState<string>("");
   const [price, setPrice] = useState<PriceLevel | 0>(0);
   const [onlyNoResv, setOnlyNoResv] = useState<boolean>(false);
-
   const [counts, setCounts] = useState<Record<string, Counts>>({});
+  const [placeChecked, setPlaceChecked] = useState<Record<string, boolean>>({});
 
+  // snapshots de votos/favs
   useEffect(() => {
     if (subtab !== "lugares") return;
     const unsubs: Array<() => void> = [];
@@ -104,6 +112,7 @@ export default function Gastro({ tripId, className }: Props) {
     return () => unsubs.forEach((u) => u());
   }, [tripId, city, deviceId, subtab]);
 
+  // estado de "Comido ✅" por usuario para la lista filtrada
   const filteredPlaces = useMemo(() => {
     const byCity = GASTRO_PLACES.filter((p) => p.city === city);
     return byCity.filter((p) => {
@@ -117,6 +126,22 @@ export default function Gastro({ tripId, className }: Props) {
       return true;
     });
   }, [city, area, price, onlyNoResv, q]);
+
+  useEffect(() => {
+    if (subtab !== "lugares") return;
+    let cancelled = false;
+    (async () => {
+      const map: Record<string, boolean> = {};
+      for (const p of filteredPlaces) {
+        const ref = doc(db, "trips", tripId, "game_places", p.id, "checks", deviceId);
+        const snap = await getDoc(ref);
+        if (cancelled) return;
+        map[p.id] = snap.exists();
+      }
+      setPlaceChecked(map);
+    })();
+    return () => { cancelled = true; };
+  }, [filteredPlaces, subtab, tripId, deviceId]);
 
   const surprise = useMemo(
     () =>
@@ -146,6 +171,23 @@ export default function Gastro({ tripId, className }: Props) {
     }
   }
 
+  async function togglePlaceCheck(p: GastroPlace) {
+    const checkRef = doc(db, "trips", tripId, "game_places", p.id, "checks", deviceId);
+    const scoreRef = doc(db, "trips", tripId, "game", "scores", deviceId);
+    const snap = await getDoc(checkRef);
+    const batch = writeBatch(db);
+    if (snap.exists()) {
+      batch.delete(checkRef);
+      batch.set(scoreRef, { name, points: increment(-1) }, { merge: true });
+      setPlaceChecked((m) => ({ ...m, [p.id]: false }));
+    } else {
+      batch.set(checkRef, { at: serverTimestamp(), name }, { merge: true });
+      batch.set(scoreRef, { name, points: increment(1) }, { merge: true });
+      setPlaceChecked((m) => ({ ...m, [p.id]: true }));
+    }
+    await batch.commit();
+  }
+
   const cities: Array<"Osaka" | "Kyoto" | "Tokyo"> = ["Osaka", "Kyoto", "Tokyo"];
   const areas = useMemo(() => ["", ...areasByCity(city)], [city]);
 
@@ -157,6 +199,7 @@ export default function Gastro({ tripId, className }: Props) {
   const [cat, setCat] = useState<string>("Todas");
   const [onlyGFDish, setOnlyGFDish] = useState(false);
   const [onlyLFDish, setOnlyLFDish] = useState(false);
+  const [dishChecked, setDishChecked] = useState<Record<string, boolean>>({});
 
   const dishCities = useMemo(() => {
     const set = new Set<string>();
@@ -194,6 +237,41 @@ export default function Gastro({ tripId, className }: Props) {
     });
   }, [qDish, cityDish, cat, onlyGFDish, onlyLFDish]);
 
+  useEffect(() => {
+    if (subtab !== "platos") return;
+    let cancelled = false;
+    (async () => {
+      const map: Record<string, boolean> = {};
+      for (const d of filteredDishes) {
+        const ref = doc(db, "trips", tripId, "game_dishes", d.id, "checks", deviceId);
+        const snap = await getDoc(ref);
+        if (cancelled) return;
+        map[d.id] = snap.exists();
+      }
+      setDishChecked(map);
+    })();
+    return () => { cancelled = true; };
+  }, [filteredDishes, subtab, tripId, deviceId]);
+
+  async function toggleDishCheck(d: Dish) {
+    const checkRef = doc(db, "trips", tripId, "game_dishes", d.id, "checks", deviceId);
+    const scoreRef = doc(db, "trips", tripId, "game", "scores", deviceId);
+    const snap = await getDoc(checkRef);
+    const batch = writeBatch(db);
+    if (snap.exists()) {
+      batch.delete(checkRef);
+      batch.set(scoreRef, { name, points: increment(-1) }, { merge: true });
+      setDishChecked((m) => ({ ...m, [d.id]: false }));
+    } else {
+      batch.set(checkRef, { at: serverTimestamp(), name }, { merge: true });
+      batch.set(scoreRef, { name, points: increment(1) }, { merge: true });
+      setDishChecked((m) => ({ ...m, [d.id]: true }));
+    }
+    await batch.commit();
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+
   return (
     <div className={`space-y-4 ${className || ""}`}>
       {/* Subpestañas */}
@@ -228,6 +306,17 @@ export default function Gastro({ tripId, className }: Props) {
         >
           🍱 Platos
         </button>
+
+        {/* Nombre del jugador (rápido, reutiliza el de notas) */}
+        <div className="ml-auto flex items-center gap-2 text-xs">
+          <span className="opacity-70">Jugador:</span>
+          <input
+            value={name}
+            onChange={(e) => { setName(e.target.value); localStorage.setItem(NAME_KEY, e.target.value); }}
+            className="rounded-lg px-2 py-1 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900"
+            placeholder="Tu nombre"
+          />
+        </div>
       </div>
 
       {/* IMPRESCINDIBLES */}
@@ -327,6 +416,7 @@ export default function Gastro({ tripId, className }: Props) {
           <div className="space-y-3">
             {filteredPlaces.map((p) => {
               const c = counts[p.id];
+              const checked = !!placeChecked[p.id];
               return (
                 <div key={p.id} className="rounded-2xl bg-white/5 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -370,6 +460,15 @@ export default function Gastro({ tripId, className }: Props) {
                       >
                         <MapPin size={14} /> Mapa
                       </a>
+                      <button
+                        onClick={() => togglePlaceCheck(p)}
+                        className={`rounded-full px-3 py-1 text-sm flex items-center gap-1 ${
+                          checked ? "bg-emerald-400 text-black" : "bg-white/10"
+                        }`}
+                        title="Marcar comido"
+                      >
+                        <CheckCircle size={14} /> {checked ? "Comido" : "Marcar"}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -442,82 +541,97 @@ export default function Gastro({ tripId, className }: Props) {
 
           {/* Lista de platos */}
           <ul className="space-y-3">
-            {filteredDishes.map((d) => (
-              <li
-                key={d.id}
-                className="p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/40"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                      {(d.regions || []).join(" · ") || "—"}
+            {filteredDishes.map((d) => {
+              const checked = !!dishChecked[d.id];
+              return (
+                <li
+                  key={d.id}
+                  className="p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/40"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {(d.regions || []).join(" · ") || "—"}
+                      </div>
+                      <h3 className="text-base font-semibold leading-tight">
+                        {d.name}
+                        {d.jp ? (
+                          <span className="ml-2 text-sm text-zinc-500 dark:text-zinc-400">
+                            {d.jp}
+                          </span>
+                        ) : null}
+                      </h3>
                     </div>
-                    <h3 className="text-base font-semibold leading-tight">
-                      {d.name}
-                      {d.jp ? (
-                        <span className="ml-2 text-sm text-zinc-500 dark:text-zinc-400">
-                          {d.jp}
-                        </span>
-                      ) : null}
-                    </h3>
+                    <span className="text-[11px] px-2 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                      {d.category}
+                    </span>
                   </div>
-                  <span className="text-[11px] px-2 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700">
-                    {d.category}
-                  </span>
-                </div>
 
-                <p className="mt-1 text-sm">{d.description}</p>
+                  <p className="mt-1 text-sm">{d.description}</p>
 
-                <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
-                  {d.contains?.gluten && (
-                    <span className="px-2 py-1 rounded-lg bg-rose-100/60 dark:bg-rose-900/30 border border-rose-300/60">
-                      gluten
-                    </span>
-                  )}
-                  {d.contains?.dairy && (
-                    <span className="px-2 py-1 rounded-lg bg-amber-100/60 dark:bg-amber-900/30 border border-amber-300/60">
-                      lácteos
-                    </span>
-                  )}
-                  {d.contains?.soy && (
-                    <span className="px-2 py-1 rounded-lg bg-sky-100/60 dark:bg-sky-900/30 border border-sky-300/60">
-                      soja
-                    </span>
-                  )}
-                  {d.contains?.egg && (
-                    <span className="px-2 py-1 rounded-lg bg-yellow-100/60 dark:bg-yellow-900/30 border border-yellow-300/60">
-                      huevo
-                    </span>
-                  )}
-                  {d.contains?.fish && (
-                    <span className="px-2 py-1 rounded-lg bg-teal-100/60 dark:bg-teal-900/30 border border-teal-300/60">
-                      pescado
-                    </span>
-                  )}
-                  {d.contains?.shellfish && (
-                    <span className="px-2 py-1 rounded-lg bg-purple-100/60 dark:bg-purple-900/30 border border-purple-300/60">
-                      marisco
-                    </span>
-                  )}
-                  {d.gfPossible && (
-                    <span className="px-2 py-1 rounded-lg border border-emerald-300/70 bg-emerald-100/50 dark:bg-emerald-900/30">
-                      GF posible
-                    </span>
-                  )}
-                  {d.lfPossible && (
-                    <span className="px-2 py-1 rounded-lg border border-emerald-300/70 bg-emerald-100/50 dark:bg-emerald-900/30">
-                      Sin lácteos
-                    </span>
-                  )}
-                </div>
-
-                {d.tips && (
-                  <div className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-                    💡 {d.tips}
+                  <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
+                    {d.contains?.gluten && (
+                      <span className="px-2 py-1 rounded-lg bg-rose-100/60 dark:bg-rose-900/30 border border-rose-300/60">
+                        gluten
+                      </span>
+                    )}
+                    {d.contains?.dairy && (
+                      <span className="px-2 py-1 rounded-lg bg-amber-100/60 dark:bg-amber-900/30 border border-amber-300/60">
+                        lácteos
+                      </span>
+                    )}
+                    {d.contains?.soy && (
+                      <span className="px-2 py-1 rounded-lg bg-sky-100/60 dark:bg-sky-900/30 border border-sky-300/60">
+                        soja
+                      </span>
+                    )}
+                    {d.contains?.egg && (
+                      <span className="px-2 py-1 rounded-lg bg-yellow-100/60 dark:bg-yellow-900/30 border border-yellow-300/60">
+                        huevo
+                      </span>
+                    )}
+                    {d.contains?.fish && (
+                      <span className="px-2 py-1 rounded-lg bg-teal-100/60 dark:bg-teal-900/30 border border-teal-300/60">
+                        pescado
+                      </span>
+                    )}
+                    {d.contains?.shellfish && (
+                      <span className="px-2 py-1 rounded-lg bg-purple-100/60 dark:bg-purple-900/30 border border-purple-300/60">
+                        marisco
+                      </span>
+                    )}
+                    {d.gfPossible && (
+                      <span className="px-2 py-1 rounded-lg border border-emerald-300/70 bg-emerald-100/50 dark:bg-emerald-900/30">
+                        GF posible
+                      </span>
+                    )}
+                    {d.lfPossible && (
+                      <span className="px-2 py-1 rounded-lg border border-emerald-300/70 bg-emerald-100/50 dark:bg-emerald-900/30">
+                        Sin lácteos
+                      </span>
+                    )}
                   </div>
-                )}
-              </li>
-            ))}
+
+                  {d.tips && (
+                    <div className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                      💡 {d.tips}
+                    </div>
+                  )}
+
+                  <div className="mt-3">
+                    <button
+                      onClick={() => toggleDishCheck(d)}
+                      className={`rounded-full px-3 py-1 text-sm inline-flex items-center gap-1 ${
+                        checked ? "bg-emerald-400 text-black" : "bg-white/10"
+                      }`}
+                      title="Marcar probado"
+                    >
+                      <CheckCircle size={14} /> {checked ? "Lo probé" : "Marcar 'lo probé'"}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
 
             {!filteredDishes.length && (
               <li className="p-6 rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 text-center text-sm text-zinc-500 dark:text-zinc-400">

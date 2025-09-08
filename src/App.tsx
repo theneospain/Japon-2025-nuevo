@@ -36,6 +36,8 @@ import { makeBlockId } from "./utils/slug";
 import Gastro from "./components/Gastro";
 import { Camera /* …ya tienes más iconos aquí */ } from "lucide-react";
 import PhotoIdeas from "./components/PhotoIdeas";
+import Game from "./components/Game";
+import { Trophy } from "lucide-react";
 
 
 
@@ -62,6 +64,8 @@ const TABS = [
   { key: "gastro",    label: "Gastronomía",   icon: Utensils,    emoji: "🍣" },
   // añade al array:
 { key: "photo", label: "Ideas foto", icon: Camera, emoji: "📷" },
+{ key: "game", label: "Ranking", icon: Trophy, emoji: "🏆" },
+
 
 ] as const;
 
@@ -1068,6 +1072,17 @@ export default function JapanTripApp() {
                   </SectionCard>
                 </section>
               )}
+              {tab === "game" && (
+  <section id="game">
+    <SectionCard
+      title="Ranking & Medallas 🏆"
+      subtitle="Descubre quién es el viajero más top del grupo"
+    >
+      <Game tripId="japon-2025" />
+    </SectionCard>
+  </section>
+)}
+
             </motion.div>
           </AnimatePresence>
         </main>
