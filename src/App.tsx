@@ -41,6 +41,7 @@ import { Trophy } from "lucide-react";
 
 
 
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Utilidades
 // ──────────────────────────────────────────────────────────────────────────────
@@ -57,17 +58,14 @@ function formatEUR(n: number) {
 
 const TABS = [
   { key: "itinerary", label: "Itinerario", icon: CalendarRange, emoji: "🗓️" },
-  { key: "info",      label: "Info práctica", icon: Info,        emoji: "ℹ️" },
-  { key: "places",    label: "Lugares",       icon: MapPin,      emoji: "📍" },
-  { key: "expenses",  label: "Gastos",        icon: Wallet,      emoji: "💶" },
-  // 👇 Nueva pestaña
-  { key: "gastro",    label: "Gastronomía",   icon: Utensils,    emoji: "🍣" },
-  // añade al array:
-{ key: "photo", label: "Ideas foto", icon: Camera, emoji: "📷" },
-{ key: "game", label: "Ranking", icon: Trophy, emoji: "🏆" },
-
-
+  { key: "info", label: "Info práctica", icon: Info, emoji: "ℹ️" },
+  { key: "places", label: "Lugares", icon: MapPin, emoji: "📍" },
+  { key: "expenses", label: "Gastos", icon: Wallet, emoji: "💶" },
+  { key: "gastro", label: "Gastronomía", icon: Utensils, emoji: "🍣" },
+  { key: "photo", label: "Ideas foto", icon: Camera, emoji: "📷" },
+  { key: "game", label: "Ranking", icon: Trophy, emoji: "🏆" },
 ] as const;
+
 
 type TabKey = typeof TABS[number]["key"];
 
