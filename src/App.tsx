@@ -397,63 +397,68 @@ function CopyButton({ text, label = "Copiar" }: { text: string; label?: string }
 }
 
 function ConverterCard() {
-  const rate = 173; // ✅ tasa fija
-  const [eur, setEur] = useState<number>(1);
-  const [jpy, setJpy] = useState<number>(eur * rate);
+  const FIXED_RATE = 173; // Tasa fija
+  const [eur, setEur] = useState<string>("1");   // guardamos como string
+  const [jpy, setJpy] = useState<string>(() => String(FIXED_RATE));
 
-  const onEur = (v: string) => {
-    const n = Number(v.replace(",", "."));
-    if (!isNaN(n)) {
-      setEur(n);
-      setJpy(n * rate);
+  // actualizar yenes cuando cambia EUR
+  useEffect(() => {
+    if (eur === "") {
+      setJpy("");
+    } else {
+      const n = Number(eur);
+      if (!isNaN(n)) setJpy(String(Math.round(n * FIXED_RATE)));
     }
-  };
+  }, [eur]);
 
-  const onJpy = (v: string) => {
-    const n = Number(v.replace(",", "."));
-    if (!isNaN(n)) {
-      setJpy(n);
-      setEur(n / rate);
+  // actualizar euros cuando cambia JPY
+  useEffect(() => {
+    if (jpy === "") {
+      setEur("");
+    } else {
+      const n = Number(jpy);
+      if (!isNaN(n)) setEur((n / FIXED_RATE).toFixed(2));
     }
-  };
+  }, [jpy]);
 
   return (
-    <SectionCard
-      title="Conversor EUR ↔ JPY"
-      subtitle={`Tasa fija · 1 € = ${rate} ¥`}
-    >
+    <SectionCard title="Conversor EUR ↔ JPY" subtitle="Tasa fija · 1 € = 173 ¥">
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
+          {/* Input Euros */}
           <div>
-            <label className="text-xs text-zinc-500 dark:text-zinc-400">
-              Euros (€)
-            </label>
+            <label className="text-xs text-zinc-500 dark:text-zinc-400">Euros (€)</label>
             <input
-              value={Number.isFinite(eur) ? eur.toFixed(2) : ""}
-              onChange={(e) => onEur(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
+              value={eur}
+              onChange={(e) => setEur(e.target.value)}
+              placeholder="0"
+              className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 
+                         bg-white dark:bg-zinc-900 px-3 py-2"
             />
           </div>
+
+          {/* Input Yenes */}
           <div>
-            <label className="text-xs text-zinc-500 dark:text-zinc-400">
-              Yenes (¥)
-            </label>
+            <label className="text-xs text-zinc-500 dark:text-zinc-400">Yenes (¥)</label>
             <input
-              value={Number.isFinite(jpy) ? Math.round(jpy).toString() : ""}
-              onChange={(e) => onJpy(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
+              value={jpy}
+              onChange={(e) => setJpy(e.target.value)}
+              placeholder="0"
+              className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 
+                         bg-white dark:bg-zinc-900 px-3 py-2"
             />
           </div>
         </div>
 
         <CopyButton
-          text={`${eur.toFixed(2)} € ≈ ${Math.round(jpy)} ¥ (tasa ${rate})`}
+          text={`${eur || "0"} € ≈ ${jpy || "0"} ¥ (tasa fija ${FIXED_RATE})`}
           label="Copiar resultado"
         />
       </div>
     </SectionCard>
   );
 }
+
 
 function EmergencyCard() {
   const items = [
