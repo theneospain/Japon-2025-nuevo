@@ -5,8 +5,6 @@ import { db } from "../lib/firebase";
 import { Trophy, Crown, Award } from "lucide-react";
 import { getDeviceId } from "../lib/device";
 
-const NAME_KEY = "notes_name";
-
 type Score = { id: string; name?: string; points?: number };
 
 function medal(i: number) {
@@ -15,7 +13,6 @@ function medal(i: number) {
   if (i === 2) return "🥉";
   return "🎯";
 }
-
 function tier(points: number) {
   if (points >= 60) return { label: "Sensei", emoji: "🧘‍♂️" };
   if (points >= 30) return { label: "Samurái", emoji: "🗡️" };
@@ -26,15 +23,19 @@ function tier(points: number) {
 
 export default function Game({ tripId }: { tripId: string }) {
   const deviceId = useMemo(() => getDeviceId(), []);
-  const [myName, setMyName] = useState<string>(() => localStorage.getItem(NAME_KEY) || "Invitado");
+  const [myName, setMyName] = useState<string>(() => localStorage.getItem("notes_name") || "Invitado");
   const [scores, setScores] = useState<Score[]>([]);
 
+  // Persisto nombre local y lo subo a MI doc (no crea docs nuevos)
   useEffect(() => {
-    localStorage.setItem(NAME_KEY, myName);
-  }, [myName]);
+    localStorage.setItem("notes_name", myName);
+    const ref = doc(db, "trips", tripId, "game", "scores", deviceId);
+    setDoc(ref, { name: myName }, { merge: true }).catch(() => {});
+  }, [tripId, deviceId, myName]);
 
+  // Ranking en tiempo real
   useEffect(() => {
-    const col = collection(db, "trips", tripId, "game_scores");
+    const col = collection(db, "trips", tripId, "game", "scores");
     return onSnapshot(col, (snap) => {
       const arr: Score[] = [];
       snap.forEach((d) => arr.push({ id: d.id, ...(d.data() as any) }));
@@ -43,14 +44,7 @@ export default function Game({ tripId }: { tripId: string }) {
     });
   }, [tripId]);
 
-  // Asegura que existe tu doc con el nombre
-  useEffect(() => {
-    const ref = doc(db, "trips", tripId, "game_scores", deviceId);
-    setDoc(ref, { name: myName }, { merge: true }).catch(() => {});
-  }, [tripId, myName, deviceId]);
-
-  const me = useMemo(() => scores.find((s) => s.id === deviceId), [scores, deviceId]);
-  const idx = scores.findIndex((s) => s.id === deviceId);
+  const me = scores.find((s) => s.id === deviceId);
   const pts = me?.points || 0;
   const tierInfo = tier(pts);
   const nextTarget = pts >= 60 ? null : pts >= 30 ? 60 : pts >= 15 ? 30 : pts >= 5 ? 15 : 5;
@@ -66,7 +60,9 @@ export default function Game({ tripId }: { tripId: string }) {
 
         {/* Mi perfil */}
         <div className="flex flex-col gap-2 mb-3">
-          <label className="text-xs text-zinc-500 dark:text-zinc-400">Tu nombre (aparece en ranking)</label>
+          <label className="text-xs text-zinc-500 dark:text-zinc-400">
+            Tu nombre (aparece en ranking)
+          </label>
           <input
             value={myName}
             onChange={(e) => setMyName(e.target.value)}
@@ -81,11 +77,20 @@ export default function Game({ tripId }: { tripId: string }) {
 
         {/* Tabla */}
         <ul className="divide-y divide-zinc-200 dark:divide-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-          {scores.length === 0 && <li className="p-3 text-sm text-zinc-500 dark:text-zinc-400">Aún no hay puntuaciones.</li>}
+          {scores.length === 0 && (
+            <li className="p-3 text-sm text-zinc-500 dark:text-zinc-400">
+              Aún no hay puntuaciones.
+            </li>
+          )}
           {scores.map((s, i) => {
             const self = s.id === deviceId;
             return (
-              <li key={s.id} className={`p-3 flex items-center justify-between gap-3 ${self ? "bg-emerald-50/60 dark:bg-emerald-900/20" : "bg-transparent"}`}>
+              <li
+                key={s.id}
+                className={`p-3 flex items-center justify-between gap-3 ${
+                  self ? "bg-emerald-50/60 dark:bg-emerald-900/20" : "bg-transparent"
+                }`}
+              >
                 <div className="flex items-center gap-2">
                   <span className="w-6 text-center">{medal(i)}</span>
                   <div className="text-sm">
@@ -103,11 +108,11 @@ export default function Game({ tripId }: { tripId: string }) {
         </ul>
 
         <div className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
-          Cómo se suman puntos: marcar *Lo probé* en platos de gastronomía, *Comido* en lugares, completar checklist, etc. (1 punto por acción).
+          Cómo se suman puntos: marcar *Lo probé* en platos, *Comido* en lugares, etc. (1 punto por check).
         </div>
       </div>
 
-      {/* Logros simples */}
+      {/* Logros */}
       <div className="p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/50">
         <div className="flex items-center gap-2 mb-2">
           <Award size={18} />

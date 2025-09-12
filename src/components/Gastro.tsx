@@ -15,7 +15,6 @@ import {
   setDoc,
   deleteDoc,
   getDoc,
-  writeBatch,
   serverTimestamp,
   increment,
 } from "firebase/firestore";
@@ -27,6 +26,7 @@ type Counts = { votes: number; favs: number; myVote: boolean; myFav: boolean };
 
 const NAME_KEY = "notes_name";
 
+/* ───────── Helpers visibles ───────── */
 function priceLabel(p: PriceLevel) {
   return "€".repeat(p);
 }
@@ -50,13 +50,27 @@ function pickSurprise(
   return weighted[idx];
 }
 
+/** Unificamos los checks en una sola colección:
+ * trips/{tripId}/game_checks/{type}_{itemId}_{deviceId}
+ */
+const checkDocId = (type: "place" | "dish", id: string, deviceId: string) =>
+  `${type}_${id}_${deviceId}`;
+const getCheckRef = (
+  tripId: string,
+  type: "place" | "dish",
+  id: string,
+  deviceId: string
+) => doc(db, "trips", tripId, "game_checks", checkDocId(type, id, deviceId));
+
 type Subtab = "lugares" | "imprescindibles" | "platos";
 
 export default function Gastro({ tripId, className }: Props) {
   const deviceId = useMemo(() => getDeviceId(), []);
   const todaySeed = useMemo(() => new Date().toLocaleDateString("en-CA"), []);
   const [subtab, setSubtab] = useState<Subtab>("lugares");
-  const [name, setName] = useState<string>(() => localStorage.getItem(NAME_KEY) || "Invitado");
+  const [name, setName] = useState<string>(
+    () => localStorage.getItem(NAME_KEY) || "Invitado"
+  );
 
   // ────────────────────────────────────────────────────────────────────────────
   // LUGARES (votos, favs, filtros por ciudad/barrio/precio/sin reserva)
@@ -69,6 +83,7 @@ export default function Gastro({ tripId, className }: Props) {
   const [counts, setCounts] = useState<Record<string, Counts>>({});
   const [placeChecked, setPlaceChecked] = useState<Record<string, boolean>>({});
 
+  // snapshots de votos/favs
   useEffect(() => {
     if (subtab !== "lugares") return;
     const unsubs: Array<() => void> = [];
@@ -112,7 +127,7 @@ export default function Gastro({ tripId, className }: Props) {
     return () => unsubs.forEach((u) => u());
   }, [tripId, city, deviceId, subtab]);
 
-  // filtros de lugares
+  // Filtro de lugares visible
   const filteredPlaces = useMemo(() => {
     const byCity = GASTRO_PLACES.filter((p) => p.city === city);
     return byCity.filter((p) => {
@@ -127,21 +142,24 @@ export default function Gastro({ tripId, className }: Props) {
     });
   }, [city, area, price, onlyNoResv, q]);
 
-  // estado "Comido"
+  // Cargar estado "Comido" por usuario (lugares)
   useEffect(() => {
     if (subtab !== "lugares") return;
     let cancelled = false;
+
     (async () => {
       const map: Record<string, boolean> = {};
       for (const p of filteredPlaces) {
-        const ref = doc(db, "trips", tripId, "game_places", p.id, "checks", deviceId);
-        const snap = await getDoc(ref);
+        const snap = await getDoc(getCheckRef(tripId, "place", p.id, deviceId));
         if (cancelled) return;
         map[p.id] = snap.exists();
       }
       setPlaceChecked(map);
     })();
-    return () => { cancelled = true; };
+
+    return () => {
+      cancelled = true;
+    };
   }, [filteredPlaces, subtab, tripId, deviceId]);
 
   const surprise = useMemo(
@@ -172,28 +190,40 @@ export default function Gastro({ tripId, className }: Props) {
     }
   }
 
+  // ✅ Comido en lugares (optimista) + puntos en ranking
   async function togglePlaceCheck(p: GastroPlace) {
-    const checkRef = doc(db, "trips", tripId, "game_places", p.id, "checks", deviceId);
+    const ref = getCheckRef(tripId, "place", p.id, deviceId);
     const scoreRef = doc(db, "trips", tripId, "game", "scores", deviceId);
-    const snap = await getDoc(checkRef);
-    const batch = writeBatch(db);
-    if (snap.exists()) {
-      batch.delete(checkRef);
-      batch.set(scoreRef, { name, points: increment(-1) }, { merge: true });
-      setPlaceChecked((m) => ({ ...m, [p.id]: false }));
-    } else {
-      batch.set(checkRef, { at: serverTimestamp(), name }, { merge: true });
-      batch.set(scoreRef, { name, points: increment(1) }, { merge: true });
-      setPlaceChecked((m) => ({ ...m, [p.id]: true }));
+    const was = !!placeChecked[p.id];
+
+    // Optimista
+    setPlaceChecked((m) => ({ ...m, [p.id]: !was }));
+
+    try {
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        await Promise.all([
+          deleteDoc(ref),
+          setDoc(scoreRef, { name, points: increment(-1) }, { merge: true }),
+        ]);
+      } else {
+        await Promise.all([
+          setDoc(ref, { at: serverTimestamp(), name }, { merge: true }),
+          setDoc(scoreRef, { name, points: increment(1) }, { merge: true }),
+        ]);
+      }
+    } catch (e) {
+      console.error("togglePlaceCheck error", e);
+      // rollback
+      setPlaceChecked((m) => ({ ...m, [p.id]: was }));
     }
-    await batch.commit();
   }
 
   const cities: Array<"Osaka" | "Kyoto" | "Tokyo"> = ["Osaka", "Kyoto", "Tokyo"];
   const areas = useMemo(() => ["", ...areasByCity(city)], [city]);
 
   // ────────────────────────────────────────────────────────────────────────────
-  // PLATOS (catálogo + puntos al marcar “Lo probé”)
+  // PLATOS (catálogo con filtros + puntos al marcar "Lo probé")
   // ────────────────────────────────────────────────────────────────────────────
   const [qDish, setQDish] = useState("");
   const [cityDish, setCityDish] = useState<string>("Todas");
@@ -207,9 +237,19 @@ export default function Gastro({ tripId, className }: Props) {
     DISHES.forEach((d) => (d.regions || []).forEach((r) => set.add(r)));
     return ["Todas", ...Array.from(set).sort()];
   }, []);
-  const dishCats = [
-    "Todas", "arroz", "noodles", "sopas", "plancha", "frito",
-    "street", "caliente", "frío", "carne", "mar", "dulce",
+  const dishCats: Array<string> = [
+    "Todas",
+    "arroz",
+    "noodles",
+    "sopas",
+    "plancha",
+    "frito",
+    "street",
+    "caliente",
+    "frío",
+    "carne",
+    "mar",
+    "dulce",
   ];
 
   const filteredDishes = useMemo(() => {
@@ -217,7 +257,9 @@ export default function Gastro({ tripId, className }: Props) {
     return DISHES.filter((d) => {
       const okQ =
         !qDish ||
-        (d.name + " " + (d.jp || "") + " " + d.description).toLowerCase().includes(t(qDish));
+        (d.name + " " + (d.jp || "") + " " + d.description)
+          .toLowerCase()
+          .includes(t(qDish));
       const okCity = cityDish === "Todas" || (d.regions || []).includes(cityDish);
       const okCat = cat === "Todas" || d.category === (cat as Dish["category"]);
       const glutenFlag = d.contains?.gluten === true;
@@ -228,38 +270,57 @@ export default function Gastro({ tripId, className }: Props) {
     });
   }, [qDish, cityDish, cat, onlyGFDish, onlyLFDish]);
 
+  // Cargar estado “Lo probé” (platos)
   useEffect(() => {
     if (subtab !== "platos") return;
     let cancelled = false;
+
     (async () => {
       const map: Record<string, boolean> = {};
       for (const d of filteredDishes) {
-        const ref = doc(db, "trips", tripId, "game_dishes", d.id, "checks", deviceId);
-        const snap = await getDoc(ref);
+        const snap = await getDoc(getCheckRef(tripId, "dish", d.id, deviceId));
         if (cancelled) return;
         map[d.id] = snap.exists();
       }
       setDishChecked(map);
     })();
-    return () => { cancelled = true; };
+
+    return () => {
+      cancelled = true;
+    };
   }, [filteredDishes, subtab, tripId, deviceId]);
 
+  // ✅ Lo probé en platos (optimista) + puntos
   async function toggleDishCheck(d: Dish) {
-    const checkRef = doc(db, "trips", tripId, "game_dishes", d.id, "checks", deviceId);
+    const ref = getCheckRef(tripId, "dish", d.id, deviceId);
     const scoreRef = doc(db, "trips", tripId, "game", "scores", deviceId);
-    const snap = await getDoc(checkRef);
-    const batch = writeBatch(db);
-    if (snap.exists()) {
-      batch.delete(checkRef);
-      batch.set(scoreRef, { name, points: increment(-1) }, { merge: true });
-      setDishChecked((m) => ({ ...m, [d.id]: false }));
-    } else {
-      batch.set(checkRef, { at: serverTimestamp(), name }, { merge: true });
-      batch.set(scoreRef, { name, points: increment(1) }, { merge: true });
-      setDishChecked((m) => ({ ...m, [d.id]: true }));
+    const was = !!dishChecked[d.id];
+
+    setDishChecked((m) => ({ ...m, [d.id]: !was })); // optimista
+
+    try {
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        await Promise.all([
+          deleteDoc(ref),
+          setDoc(scoreRef, { name, points: increment(-1) }, { merge: true }),
+        ]);
+      } else {
+        await Promise.all([
+          setDoc(ref, { at: serverTimestamp(), name }, { merge: true }),
+          setDoc(scoreRef, { name, points: increment(1) }, { merge: true }),
+        ]);
+      }
+    } catch (e) {
+      console.error("toggleDishCheck error", e);
+      setDishChecked((m) => ({ ...m, [d.id]: was })); // rollback
     }
-    await batch.commit();
   }
+
+  // Guarda el nombre que se usa para puntos
+  useEffect(() => {
+    localStorage.setItem(NAME_KEY, name);
+  }, [name]);
 
   // ────────────────────────────────────────────────────────────────────────────
 
@@ -329,7 +390,7 @@ export default function Gastro({ tripId, className }: Props) {
                 setArea("");
               }}
             >
-              {cities.map((c) => (
+              {(["Osaka", "Kyoto", "Tokyo"] as const).map((c) => (
                 <option key={c} value={c}>
                   {c}
                 </option>
@@ -620,7 +681,8 @@ export default function Gastro({ tripId, className }: Props) {
                       }`}
                       title="Marcar probado"
                     >
-                      <CheckCircle size={14} /> {checked ? "Lo probé" : "Marcar 'lo probé'"}
+                      <CheckCircle size={14} />{" "}
+                      {checked ? "Lo probé" : "Marcar 'lo probé'"}
                     </button>
                   </div>
                 </li>
@@ -638,3 +700,4 @@ export default function Gastro({ tripId, className }: Props) {
     </div>
   );
 }
+

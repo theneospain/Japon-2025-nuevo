@@ -396,62 +396,94 @@ function CopyButton({ text, label = "Copiar" }: { text: string; label?: string }
   );
 }
 
+// Reemplaza tu función ConverterCard completa por esta
+
 function ConverterCard() {
-  const FIXED_RATE = 173; // Tasa fija
-  const [eur, setEur] = useState<string>("1");   // guardamos como string
-  const [jpy, setJpy] = useState<string>(() => String(FIXED_RATE));
+  const RATE = 173; // tasa fija
+  const [eurStr, setEurStr] = useState<string>("1");
+  const [jpyStr, setJpyStr] = useState<string>(String(1 * RATE));
 
-  // actualizar yenes cuando cambia EUR
-  useEffect(() => {
-    if (eur === "") {
-      setJpy("");
-    } else {
-      const n = Number(eur);
-      if (!isNaN(n)) setJpy(String(Math.round(n * FIXED_RATE)));
-    }
-  }, [eur]);
+  // Helpers
+  const toNumber = (s: string) => parseFloat(s.replace(",", "."));
+  const isEurTyping = (s: string) =>
+    /^(\d+|\d+\.\d{0,2})?$/.test(s.replace(",", ".")); // vacío, enteros, o con 1-2 decimales
+  const isJpyTyping = (s: string) => /^\d*$/.test(s); // sólo dígitos o vacío
 
-  // actualizar euros cuando cambia JPY
-  useEffect(() => {
-    if (jpy === "") {
-      setEur("");
-    } else {
-      const n = Number(jpy);
-      if (!isNaN(n)) setEur((n / FIXED_RATE).toFixed(2));
+  const formatEurForDisplay = (n: number) => {
+    // Mantén 0–2 decimales sin forzar ".00"
+    const s = (Math.round(n * 100) / 100).toFixed(2);
+    return s.replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
+  };
+
+  // Cambios mientras tecleas en EUR
+  const onEurChange = (v: string) => {
+    if (!isEurTyping(v)) return;       // ignora caracteres no válidos
+    setEurStr(v);
+    if (v === "") {                    // vacío -> no calcules
+      setJpyStr("");
+      return;
     }
-  }, [jpy]);
+    const n = toNumber(v);
+    if (!isNaN(n)) setJpyStr(String(Math.round(n * RATE)));
+  };
+
+  // Cambios mientras tecleas en JPY
+  const onJpyChange = (v: string) => {
+    if (!isJpyTyping(v)) return;
+    setJpyStr(v);
+    if (v === "") {
+      setEurStr("");
+      return;
+    }
+    const n = parseInt(v, 10);
+    if (!isNaN(n)) setEurStr(formatEurForDisplay(n / RATE));
+  };
+
+  // Formateo suave al salir del campo (sin forzar 2 decimales en vivo)
+  const onEurBlur = () => {
+    if (eurStr === "") return;
+    const n = toNumber(eurStr);
+    if (!isNaN(n)) setEurStr(formatEurForDisplay(n));
+  };
+  const onJpyBlur = () => {
+    if (jpyStr === "") return;
+    const n = parseInt(jpyStr, 10);
+    if (!isNaN(n)) setJpyStr(String(Math.round(n)));
+  };
+
+  const eurNum = eurStr === "" ? 0 : toNumber(eurStr) || 0;
+  const jpyNum = jpyStr === "" ? 0 : parseInt(jpyStr, 10) || 0;
 
   return (
-    <SectionCard title="Conversor EUR ↔ JPY" subtitle="Tasa fija · 1 € = 173 ¥">
+    <SectionCard title="Conversor EUR ↔ JPY" subtitle={`Tasa fija · 1 € = ${RATE} ¥`}>
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
-          {/* Input Euros */}
           <div>
             <label className="text-xs text-zinc-500 dark:text-zinc-400">Euros (€)</label>
             <input
-              value={eur}
-              onChange={(e) => setEur(e.target.value)}
+              value={eurStr}
+              onChange={(e) => onEurChange(e.target.value)}
+              onBlur={onEurBlur}
+              inputMode="decimal"
               placeholder="0"
-              className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 
-                         bg-white dark:bg-zinc-900 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
             />
           </div>
-
-          {/* Input Yenes */}
           <div>
             <label className="text-xs text-zinc-500 dark:text-zinc-400">Yenes (¥)</label>
             <input
-              value={jpy}
-              onChange={(e) => setJpy(e.target.value)}
+              value={jpyStr}
+              onChange={(e) => onJpyChange(e.target.value)}
+              onBlur={onJpyBlur}
+              inputMode="numeric"
               placeholder="0"
-              className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 
-                         bg-white dark:bg-zinc-900 px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
             />
           </div>
         </div>
 
         <CopyButton
-          text={`${eur || "0"} € ≈ ${jpy || "0"} ¥ (tasa fija ${FIXED_RATE})`}
+          text={`${formatEurForDisplay(eurNum)} € ≈ ${jpyNum} ¥ (tasa ${RATE})`}
           label="Copiar resultado"
         />
       </div>
