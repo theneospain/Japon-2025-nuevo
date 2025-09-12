@@ -138,54 +138,246 @@ function TripMeta() {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Bloque 2: Itinerario con checks
+// Bloque 2: Itinerario con checks + stops opcionales
 // ──────────────────────────────────────────────────────────────────────────────
-type Activity = { time?: string | null; text: string };
-type DayPlan  = { date: string; city: string; emoji?: string; activities: Activity[] };
+type Activity = {
+  time?: string | null;
+  text: string;
+  stop?: { gmaps: string; placeId?: string }; // ✅ Enlace a Google Maps por actividad (opcional)
+};
+
+type DayPlan  = {
+  date: string;
+  city: string;
+  emoji?: string;
+  activities: Activity[];
+};
 
 const ITINERARY: DayPlan[] = [
-  { date: "2025-10-20", city: "Vuelos a Japón", emoji: "✈️", activities: [
-    { time: "09:30–17:40", text: "Vuelo Madrid → Doha" },
-    { time: "20:25–12:55 (+1)", text: "Vuelo Doha → Tokio (NRT)" },
-  ]},
-  { date: "2025-10-21", city: "Llegada y Osaka (5 noches)", emoji: "🇯🇵", activities: [
-    { time: "12:55", text: "Llegada a Narita (NRT)" },
-    { time: "14:00–17:00", text: "Shinkansen a Osaka" },
-    { time: null, text: "Check-in hotel Osaka" },
-    { time: "Tarde/Noche", text: "Namba, Den-Den Town, Dotonbori, Kuromon, Glico, Don Quijote, Namba Yasaka, Shinsaibashi, Karaoke" },
-  ]},
-  { date: "2025-10-22", city: "Osaka", emoji: "🏯", activities: [
-    { text: "Castillo de Osaka" },{ text: "Umeda Sky" },{ text: "Acuario Kaiyukan" },{ text: "Templo Shitennoji" },{ text: "Isshinji" },{ text: "Sumiyoshi Taisha" }
-  ]},
-  { date: "2025-10-23", city: "Universal + Shinsekai", emoji: "🎢", activities: [{ text: "Universal Studios Japan" },{ text: "Shinsekai (Tsutenkaku)" }]},
-  { date: "2025-10-24", city: "Hiroshima + Miyajima", emoji: "⛩️", activities: [{ text: "Excursión a Hiroshima" },{ text: "Miyajima (torii flotante)" }]},
-  { date: "2025-10-25", city: "Nara", emoji: "🦌", activities: [{ text: "Templo Todai-ji" },{ text: "Parque de ciervos" },{ text: "Kasuga Taisha" }]},
-  { date: "2025-10-26", city: "Traslado a Kioto (3 noches)", emoji: "🚄", activities: [{ text: "Osaka → Kioto" },{ time:"Tarde", text: "Castillo de Nijo" },{ text: "Kyoto Tower" }]},
-  { date: "2025-10-27", city: "Kioto", emoji: "⛩️", activities: [{ text: "Fushimi Inari" },{ text: "Sannenzaka & Ninenzaka" },{ text: "Kinkaku-ji" },{ text: "Heian" },{ text: "Gion y Pontocho" }]},
-  { date: "2025-10-28", city: "Arashiyama + opciones", emoji: "🎋", activities: [{ text: "Bosque de bambú" },{ text: "Otagi Nenbutsu-ji" },{ text: "Opcional: Ginkaku-ji / Kiyomizudera / Ryoan-ji / Kibune" }]},
-  { date: "2025-10-29", city: "Traslado a Tokio (6 noches)", emoji: "🚄", activities: [{ text: "Kioto → Tokio" },{ text: "Opcional: Shirakawa-go" },{ text: "Godzilla Shinjuku" },{ text: "Mirador Gobierno Metropolitano" },{ text: "Kabukicho, Cruce Shibuya, Hachiko" }]},
-  { date: "2025-10-30", city: "Harajuku + Akihabara + Kart", emoji: "🎮", activities: [{ text: "Harajuku (Takeshita)" },{ text: "Akihabara (maid café, figuras)" },{ time:"Noche", text: "Kart (con PIC)" }]},
-  { date: "2025-10-31", city: "Hakone (Monte Fuji)", emoji: "🗻", activities: [{ text: "Hakone" },{ text: "Teleférico Owakudani" },{ text: "Vistas del Fuji (si clima)" }]},
-  { date: "2025-11-01", city: "Asakusa + Roppongi + Tokyo Tower", emoji: "🏮", activities: [{ text: "Asakusa (Sensō-ji + Nakamise)" },{ text: "Roppongi" },{ text: "Tokyo Tower" }]},
-  { date: "2025-11-02", city: "Parques / Nikkō / Kasukabe", emoji: "🎢", activities: [{ text: "Disneyland / DisneySea" },{ text: "Nikkō" },{ text: "Kasukabe" }]},
-  { date: "2025-11-03", city: "Meiji + Ginza + Odaiba", emoji: "🛍️", activities: [{ text: "Santuario Meiji" },{ text: "Ginza (sushi)" },{ text: "Shiodome → Yurikamome a Odaiba" },{ text: "Rainbow Bridge, Gundam, barco Sumida" }]},
-  { date: "2025-11-04", city: "Tokio (libre) + Vuelo", emoji: "🧳", activities: [{ time:"Mañana", text: "Libre (TeamLab o compras)" },{ time:"21:55–04:40 (+1)", text: "Vuelo Tokio → Doha" }]},
+  {
+    date: "2025-10-20",
+    city: "Vuelos a Japón",
+    emoji: "✈️",
+    activities: [
+      { time: "09:30–17:40", text: "Vuelo Madrid → Doha" },
+      { time: "20:25–12:55 (+1)", text: "Vuelo Doha → Tokio (NRT)" },
+    ],
+  },
+
+  {
+    date: "2025-10-21",
+    city: "Llegada y Osaka (5 noches)",
+    emoji: "🇯🇵",
+    activities: [
+      { time: "12:55", text: "Llegada a Narita (NRT)" },
+      { time: "14:00–17:00", text: "Shinkansen a Osaka" },
+      { time: null, text: "Check-in hotel Osaka" },
+      {
+        time: "Tarde/Noche",
+        text: "Namba, Den-Den Town, Dotonbori, Kuromon, Glico, Don Quijote, Namba Yasaka, Shinsaibashi, Karaoke",
+        // Puedes dejar este bloque sin stops por ser plan abierto de paseo nocturno
+      },
+    ],
+  },
+
+  {
+    date: "2025-10-22",
+    city: "Osaka",
+    emoji: "🏯",
+    activities: [
+      { text: "Castillo de Osaka", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Osaka%20Castle" } },
+      { text: "Umeda Sky", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Umeda%20Sky%20Building" } },
+      { text: "Acuario Kaiyukan", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Osaka%20Aquarium%20Kaiyukan" } },
+      { text: "Templo Shitennoji", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Shitenno-ji%20Temple" } },
+      { text: "Isshinji", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Isshinji%20Temple%20Osaka" } },
+      { text: "Sumiyoshi Taisha", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Sumiyoshi%20Taisha" } },
+    ],
+  },
+
+  {
+    date: "2025-10-23",
+    city: "Universal + Shinsekai",
+    emoji: "🎢",
+    activities: [
+      { text: "Universal Studios Japan", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Universal%20Studios%20Japan" } },
+      { text: "Shinsekai (Tsutenkaku)", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Tsutenkaku%20Tower" } },
+    ],
+  },
+
+  {
+    date: "2025-10-24",
+    city: "Hiroshima + Miyajima",
+    emoji: "⛩️",
+    activities: [
+      { text: "Excursión a Hiroshima", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Hiroshima%20Peace%20Memorial%20Park" } },
+      { text: "Miyajima (torii flotante)", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Itsukushima%20Shrine" } },
+    ],
+  },
+
+  {
+    date: "2025-10-25",
+    city: "Nara",
+    emoji: "🦌",
+    activities: [
+      { text: "Templo Todai-ji", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Todai-ji%20Temple" } },
+      { text: "Parque de ciervos", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Nara%20Park" } },
+      { text: "Kasuga Taisha", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Kasuga%20Taisha" } },
+    ],
+  },
+
+  {
+    date: "2025-10-26",
+    city: "Traslado a Kioto (3 noches)",
+    emoji: "🚄",
+    activities: [
+      { text: "Osaka → Kioto" },
+      { time: "Tarde", text: "Castillo de Nijo", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Nijo%20Castle" } },
+      { text: "Kyoto Tower", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Kyoto%20Tower" } },
+    ],
+  },
+
+  {
+    date: "2025-10-27",
+    city: "Kioto",
+    emoji: "⛩️",
+    activities: [
+      { text: "Fushimi Inari", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Fushimi%20Inari%20Taisha" } },
+      { text: "Sannenzaka & Ninenzaka", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Sannenzaka%20Ninenzaka" } },
+      { text: "Kinkaku-ji", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Kinkaku-ji" } },
+      { text: "Heian", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Heian%20Shrine" } },
+      { text: "Gion y Pontocho", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Gion%20Pontocho" } },
+    ],
+  },
+
+  {
+    date: "2025-10-28",
+    city: "Arashiyama + opciones",
+    emoji: "🎋",
+    activities: [
+      { text: "Bosque de bambú", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Arashiyama%20Bamboo%20Grove" } },
+      { text: "Otagi Nenbutsu-ji", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Otagi%20Nenbutsu-ji" } },
+      { text: "Opcional: Ginkaku-ji", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Ginkaku-ji" } },
+      { text: "Opcional: Kiyomizudera", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Kiyomizu-dera" } },
+      { text: "Opcional: Ryoan-ji", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Ryoan-ji" } },
+      { text: "Opcional: Kibune", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Kibune" } },
+    ],
+  },
+
+  {
+    date: "2025-10-29",
+    city: "Traslado a Tokio (6 noches)",
+    emoji: "🚄",
+    activities: [
+      { text: "Kioto → Tokio" },
+      { text: "Opcional: Shirakawa-go", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Shirakawa-go" } },
+      { text: "Godzilla Shinjuku", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Godzilla%20Head%20Shinjuku" } },
+      { text: "Mirador Gobierno Metropolitano", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Tokyo%20Metropolitan%20Government%20Building%20Observatory" } },
+      { text: "Kabukicho, Cruce Shibuya, Hachiko", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Shibuya%20Crossing%20Hachiko" } },
+    ],
+  },
+
+  {
+    date: "2025-10-30",
+    city: "Harajuku + Akihabara + Kart",
+    emoji: "🎮",
+    activities: [
+      { text: "Harajuku (Takeshita)", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Takeshita%20Street" } },
+      { text: "Akihabara (maid café, figuras)", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Akihabara" } },
+      { time: "Noche", text: "Kart (con PIC)" }, // actividad con punto de encuentro variable
+    ],
+  },
+
+  {
+    date: "2025-10-31",
+    city: "Hakone (Monte Fuji)",
+    emoji: "🗻",
+    activities: [
+      { text: "Hakone", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Hakone" } },
+      { text: "Teleférico Owakudani", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Owakudani" } },
+      { text: "Vistas del Fuji (si clima)", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Mt%20Fuji%20viewpoint%20Hakone" } },
+    ],
+  },
+
+  {
+    date: "2025-11-01",
+    city: "Asakusa + Roppongi + Tokyo Tower",
+    emoji: "🏮",
+    activities: [
+      { text: "Asakusa (Sensō-ji + Nakamise)", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Senso-ji%20Nakamise" } },
+      { text: "Roppongi", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Roppongi%20Hills" } },
+      { text: "Tokyo Tower", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Tokyo%20Tower" } },
+    ],
+  },
+
+  {
+    date: "2025-11-02",
+    city: "Parques / Nikkō / Kasukabe",
+    emoji: "🎢",
+    activities: [
+      { text: "Disneyland / DisneySea", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Tokyo%20Disney%20Resort" } },
+      { text: "Nikkō", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Nikko%20Toshogu%20Shrine" } },
+      { text: "Kasukabe" }, // libre
+    ],
+  },
+
+  {
+    date: "2025-11-03",
+    city: "Meiji + Ginza + Odaiba",
+    emoji: "🛍️",
+    activities: [
+      { text: "Santuario Meiji", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Meiji%20Jingu" } },
+      { text: "Ginza (sushi)", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Ginza" } },
+      { text: "Shiodome → Yurikamome a Odaiba", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Yurikamome%20Line" } },
+      { text: "Rainbow Bridge, Gundam, barco Sumida", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Odaiba%20Gundam%20Rainbow%20Bridge" } },
+    ],
+  },
+
+  {
+    date: "2025-11-04",
+    city: "Tokio (libre) + Vuelo",
+    emoji: "🧳",
+    activities: [
+      { time: "Mañana", text: "Libre (TeamLab o compras)", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=teamLab%20Planets%20Tokyo" } },
+      { time: "21:55–04:40 (+1)", text: "Vuelo Tokio → Doha" },
+    ],
+  },
 ];
 
-function DayHeader({ dateISO, city, emoji, isToday, isPast }: { dateISO: string; city: string; emoji?: string; isToday: boolean; isPast: boolean }) {
+// Cabecera del día (igual que antes)
+function DayHeader({
+  dateISO,
+  city,
+  emoji,
+  isToday,
+  isPast
+}: {
+  dateISO: string;
+  city: string;
+  emoji?: string;
+  isToday: boolean;
+  isPast: boolean;
+}) {
   const d  = new Date(dateISO + "T00:00:00");
   const df = d.toLocaleDateString("es-ES", { weekday: "short", day: "2-digit", month: "short" });
 
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${isPast ? "bg-zinc-100 dark:bg-zinc-800" : "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"}`}>{emoji ?? "📅"}</div>
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${
+          isPast ? "bg-zinc-100 dark:bg-zinc-800" : "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+        }`}>
+          {emoji ?? "📅"}
+        </div>
         <div>
           <div className="text-sm text-zinc-500 dark:text-zinc-400">{df}</div>
           <h3 className="text-base font-semibold leading-tight">{city}</h3>
         </div>
       </div>
-      {isToday && <span className="text-[11px] px-2 py-1 rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">HOY</span>}
+      {isToday && (
+        <span className="text-[11px] px-2 py-1 rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
+          HOY
+        </span>
+      )}
     </div>
   );
 }
@@ -206,8 +398,10 @@ function DayCard({
   const isToday = d.toDateString() === new Date().toDateString();
 
   const [open, setOpen] = useState(!!defaultOpen);
-  const total     = day.activities.length;
-  const completed = day.activities.reduce((acc, _a, i) => acc + (done[`${day.date}-${i}`] ? 1 : 0), 0);
+
+  const activities = Array.isArray(day.activities) ? day.activities : [];
+  const total     = activities.length;
+  const completed = activities.reduce((acc, _a, i) => acc + (done[`${day.date}-${i}`] ? 1 : 0), 0);
   const pct       = Math.round((completed / Math.max(1, total)) * 100);
 
   return (
@@ -252,6 +446,7 @@ function DayCard({
                 <button
                   onClick={() => setOpen(!open)}
                   className="text-[13px] sm:text-sm px-3 py-1.5 leading-tight rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-1"
+                  aria-expanded={open}
                 >
                   <ChevronDown
                     size={16}
@@ -260,17 +455,26 @@ function DayCard({
                   {open ? "Ocultar" : "Ver actividades"}
                 </button>
 
+                {/* Pasa más datos al MapDayButton para abrir fichas oficiales */}
                 <div className="min-w-[130px] max-w-full">
                   <MapDayButton
                     day={day}
-                    places={PLACES.map(p => ({ name: p.name, gmaps: p.links.gmaps }))}
+                    places={PLACES.map((p: any) => ({
+                      id: p.id,
+                      name: p.name,
+                      city: p.city ?? p.area ?? "",
+                      gmaps: p.links?.gmaps,
+                      placeId: p.links?.placeId, // si lo tienes, abre exacto
+                      lat: p.lat,
+                      lng: p.lng,
+                    }))}
                   />
                 </div>
               </div>
 
               {open && (
                 <ul className="divide-y divide-zinc-100 dark:divide-zinc-800 rounded-xl border border-zinc-100 dark:border-zinc-800 overflow-hidden">
-                  {day.activities.map((a, i) => {
+                  {activities.map((a, i) => {
                     const id = `${day.date}-${i}`;
                     const checked = !!done[id];
                     return (
@@ -296,14 +500,11 @@ function DayCard({
               )}
             </div>
 
-            {/* Subir desde galería — versión compacta (solo ese botón) */}
+            {/* Galería de fotos del día (versión simple para máxima compatibilidad) */}
             <div className="mt-2">
               <PhotoGallery
                 placeId={`day-${day.date}`}
                 placeName={`Fotos de ${day.city}`}
-                compact
-                showUrl={false}
-                showAlbum={false}
               />
             </div>
           </SectionCard>
