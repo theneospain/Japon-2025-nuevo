@@ -38,6 +38,7 @@ import { Camera /* …ya tienes más iconos aquí */ } from "lucide-react";
 import PhotoIdeas from "./components/PhotoIdeas";
 import Game from "./components/Game";
 import { Trophy } from "lucide-react";
+import BottomNav from "./components/BottomNav";
 
 
 
@@ -1032,7 +1033,8 @@ export default function JapanTripApp() {
           </div>
         </header>
 
-        <main className="max-w-md mx-auto px-4 pt-4 pb-24 text-[15px] md:text-base">
+        {/* Más padding abajo para el nuevo nav + tipografía un pelín mayor en móvil */}
+        <main className="max-w-md mx-auto px-4 pt-4 pb-28 text-[15px] md:text-base">
           <AnimatePresence mode="wait">
             <motion.div
               key={tab}
@@ -1070,49 +1072,28 @@ export default function JapanTripApp() {
                   </SectionCard>
                 </section>
               )}
-              {tab === "game" && (
-  <section id="game">
-    <SectionCard
-      title="Ranking & Medallas 🏆"
-      subtitle="Descubre quién es el viajero más top del grupo"
-    >
-      <Game tripId="japon-2025" />
-    </SectionCard>
-  </section>
-)}
 
+              {/* RANKING / GAME */}
+              {tab === "game" && (
+                <section id="game">
+                  <SectionCard
+                    title="Ranking & Medallas 🏆"
+                    subtitle="Descubre quién es el viajero más top del grupo"
+                  >
+                    <Game tripId="japon-2025" />
+                  </SectionCard>
+                </section>
+              )}
             </motion.div>
           </AnimatePresence>
         </main>
 
-        <nav className="fixed bottom-0 inset-x-0 z-40">
-          <div className="max-w-md mx-auto px-4 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2">
-            {/* 6 pestañas */}
-            <div className="grid grid-cols-6 gap-2 p-2 bg-white dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-lg">
-              {tabs.map((t) => {
-                const Icon = t.icon;
-                const active = tab === t.key;
-                return (
-                  <button
-                    key={t.key}
-                    onClick={() => setTab(t.key)}
-                    className={`flex flex-col items-center justify-center gap-1 py-1 rounded-xl transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-600 ${
-                      active ? "bg-zinc-100 dark:bg-zinc-800" : "hover:bg-zinc-100/80 dark:hover:bg-zinc-800/70"
-                    }`}
-                    aria-current={active ? "page" : undefined}
-                    aria-label={t.label}
-                  >
-                    <Icon size={20} />
-                    <span className={`text-[11px] leading-none ${active ? "font-semibold" : "text-zinc-500 dark:text-zinc-400"}`}>
-                      {t.emoji ? `${t.emoji} ${t.label}` : t.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </nav>
-
+        {/* Nuevo menú inferior con carrusel + flechas */}
+        <BottomNav
+          tabs={tabs as any}
+          current={tab}
+          onChange={(k) => setTab(k as TabKey)}
+        />
       </div>
     </div>
   );

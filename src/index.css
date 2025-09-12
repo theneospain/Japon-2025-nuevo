@@ -2,17 +2,160 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { color-scheme: light dark; }
-body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji'; }
+/* =========================
+   Tema & tokens estilo Revolut
+   ========================= */
+@layer base {
+  :root {
+    /* Light */
+    --bg: #f6f7fb;
+    --text: #0b1220;
+    --muted: #5b6474;
 
-/* ——— Tipografía global algo mayor en móviles ——— */
-@media (max-width: 639px) {
-  html { font-size: 17px; }         /* antes 16px */
-  body { line-height: 1.55; }       /* algo más de aire */
+    --panel: rgba(255,255,255,0.9);
+    --panel-border: rgba(13,18,28,0.08);
+    --panel-blur: 10px;
+
+    --accent1: #6d28d9; /* violeta */
+    --accent2: #06b6d4; /* cian */
+    --ring: rgba(109,40,217,0.35);
+
+    --card-shadow: 0 8px 24px rgba(13,18,28,0.08);
+  }
+
+  .dark {
+    /* Dark “navy” */
+    --bg: #0b0f19;
+    --text: #e5e7eb;
+    --muted: #9aa3b2;
+
+    --panel: rgba(15,17,28,0.82);
+    --panel-border: rgba(255,255,255,0.08);
+    --panel-blur: 12px;
+
+    --ring: rgba(6,182,212,0.35);
+    --card-shadow: 0 10px 28px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  /* Fondo con sutil gradiente (tipo Revolut) */
+  html, body {
+    height: 100%;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(6,182,212,0.12), transparent 60%),
+      radial-gradient(900px 500px at -10% 0%, rgba(109,40,217,0.14), transparent 55%),
+      var(--bg);
+    color: var(--text);
+  }
+
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji';
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Tipografía un poco mayor en móvil */
+  @media (max-width: 639px) {
+    html { font-size: 17px; }
+    body { line-height: 1.55; }
+  }
+
+  /* Mejores focus rings */
+  *:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 2px var(--ring);
+    border-radius: 12px;
+  }
 }
 
-/* Mejor contraste en modo oscuro */
-:root .dark {
-  --card-bg: rgba(18, 18, 18, 0.85);  /* antes ~zinc-950/80 */
-  --card-border: #3f3f46;             /* zinc-700 aprox */
+/* =========================
+   Componentes “glass” y chips
+   ========================= */
+@layer components {
+  /* Tarjetas tipo Revolut (se aplica automáticamente a muchas de tus cards) */
+  .dark .rounded-2xl.border,
+  .rounded-2xl.border {
+    background: var(--panel);
+    border-color: var(--panel-border);
+    backdrop-filter: blur(var(--panel-blur));
+    box-shadow: var(--card-shadow);
+  }
+
+  /* Navegación inferior estilo glass */
+  .revo-nav {
+    background: var(--panel);
+    border-color: var(--panel-border);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.25);
+  }
+
+  /* Botón “pastilla” suave */
+  .btn-soft {
+    @apply rounded-xl border text-sm px-3 py-1.5 transition-colors;
+    border-color: var(--panel-border);
+    background: color-mix(in oklab, var(--panel) 92%, transparent);
+  }
+  .btn-soft:hover { background: color-mix(in oklab, var(--panel) 85%, transparent); }
+
+  /* Chips (etiquetas) */
+  .chip {
+    @apply text-[11px] px-2 py-1 rounded-lg border;
+    border-color: var(--panel-border);
+    background: color-mix(in oklab, var(--panel) 88%, transparent);
+  }
+
+  /* Campos */
+  .field {
+    @apply rounded-xl border px-3 py-2 text-sm bg-white dark:bg-zinc-900;
+    border-color: var(--panel-border);
+  }
+
+  /* Divisor fino */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--panel-border), transparent);
+  }
+
+  /* Texto con gradiente (para titulares si lo usas) */
+  .text-gradient {
+    background: linear-gradient(90deg, var(--accent1), var(--accent2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
 }
+
+/* =========================
+   Utilidades
+   ========================= */
+@layer utilities {
+  /* Ocultar scrollbar en contenedores horizontales */
+  .scrollbar-none { scrollbar-width: none; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+
+  /* Safe-area para iPhone */
+  .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 8px); }
+
+  /* Pequeña animación en elementos activos (tabs, chips, etc.) */
+  .active-bump { transform: translateY(-1px); }
+
+  /* Sombra suave reutilizable */
+  .shadow-revo { box-shadow: var(--card-shadow); }
+}
+
+/* =========================
+   Afinados específicos de tu UI
+   ========================= */
+
+/* Header blur más presente */
+header.backdrop-blur { backdrop-filter: blur(12px); }
+
+/* Botones del bottom nav: icono + etiqueta más legibles */
+.revo-nav button span { letter-spacing: .2px; }
+.revo-nav button[aria-current="page"] {
+  background: color-mix(in oklab, var(--panel) 80%, transparent);
+}
+
+/* Progreso, barras y contenedores finos */
+.w-full.h-2.rounded-full { box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); }
+
+/* Inputs de búsqueda con icono a la izquierda quedan “más revo” */
+input::placeholder { color: var(--muted); opacity: .9; }
