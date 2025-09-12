@@ -214,11 +214,15 @@ function DayCard({
       <div className="absolute left-5 top-0 bottom-0 w-[2px] bg-zinc-200 dark:bg-zinc-800" />
       <div className="pl-10">
         <div className="relative mb-3">
-          <div className={`absolute -left-[11px] top-2 w-5 h-5 rounded-full border-2 ${
-            isToday ? "border-emerald-500" :
-            isPast  ? "border-zinc-400 dark:border-zinc-600" :
-                      "border-zinc-300 dark:border-zinc-700"
-          } bg-white dark:bg-zinc-900`} />
+          <div
+            className={`absolute -left-[11px] top-2 w-5 h-5 rounded-full border-2 ${
+              isToday
+                ? "border-emerald-500"
+                : isPast
+                ? "border-zinc-400 dark:border-zinc-600"
+                : "border-zinc-300 dark:border-zinc-700"
+            } bg-white dark:bg-zinc-900`}
+          />
 
           <SectionCard title="" subtitle="">
             <div className="space-y-3">
@@ -242,8 +246,8 @@ function DayCard({
                 <div className="h-full bg-zinc-900 dark:bg-zinc-100" style={{ width: `${pct}%` }} />
               </div>
 
-              {/* ⬇️ Toolbar con wrap y botones más compactos en móvil */}
-              <div className="flex flex-wrap items-center gap-2 gap-y-2">
+              {/* Toolbar minimal: solo Ver actividades + Mapa del día */}
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => setOpen(!open)}
                   className="text-[13px] sm:text-sm px-3 py-1.5 leading-tight rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-1"
@@ -255,21 +259,6 @@ function DayCard({
                   {open ? "Ocultar" : "Ver actividades"}
                 </button>
 
-                <button
-                  onClick={setAll}
-                  className="text-[13px] sm:text-sm px-3 py-1.5 leading-tight rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                >
-                  Marcar todo
-                </button>
-
-                <button
-                  onClick={clearAll}
-                  className="text-[13px] sm:text-sm px-3 py-1.5 leading-tight rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                >
-                  Reset
-                </button>
-
-                {/* Contenedor para que "Mapa del día" pueda partir en 2 líneas */}
                 <div className="min-w-[130px] max-w-full">
                   <MapDayButton
                     day={day}
@@ -306,11 +295,14 @@ function DayCard({
               )}
             </div>
 
-            {/* Galería de fotos del día */}
+            {/* Subir desde galería — versión compacta (solo ese botón) */}
             <div className="mt-2">
               <PhotoGallery
                 placeId={`day-${day.date}`}
                 placeName={`Fotos de ${day.city}`}
+                compact
+                showUrl={false}
+                showAlbum={false}
               />
             </div>
           </SectionCard>
@@ -319,6 +311,7 @@ function DayCard({
     </div>
   );
 }
+
 
 
 function Itinerary() {
