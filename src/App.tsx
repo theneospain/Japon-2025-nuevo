@@ -39,6 +39,7 @@ import PhotoIdeas from "./components/PhotoIdeas";
 import Game from "./components/Game";
 import { Trophy } from "lucide-react";
 import BottomNav from "./components/BottomNav";
+import React, { useEffect, useState, useRef } from "react";
 
 
 
@@ -1011,7 +1012,6 @@ export default function JapanTripApp() {
   return (
     <div className={theme === "dark" ? "dark" : ""}>
       <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 transition-colors duration-300">
-
         <header className="sticky top-0 z-40 backdrop-blur bg-white/70 dark:bg-zinc-900/70 border-b border-zinc-200 dark:border-zinc-800">
           <div className="max-w-md mx-auto flex items-center justify-between px-4 py-3">
             <div className="flex items-center gap-2">
@@ -1034,7 +1034,7 @@ export default function JapanTripApp() {
         </header>
 
         {/* Más padding abajo para el nuevo nav + tipografía un pelín mayor en móvil */}
-        <main className="max-w-md mx-auto px-4 pt-4 pb-28 text-[15px] md:text-base">
+        <main className="max-w-md mx-auto px-4 pt-4 pb-24 text-[15.5px] sm:text-[15px] md:text-base">
           <AnimatePresence mode="wait">
             <motion.div
               key={tab}
@@ -1090,11 +1090,88 @@ export default function JapanTripApp() {
 
         {/* Nuevo menú inferior con carrusel + flechas */}
         <BottomNav
-          tabs={tabs as any}
+          tabs={tabs}
           current={tab}
           onChange={(k) => setTab(k as TabKey)}
         />
       </div>
     </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Menú inferior deslizable (carrusel) estilo "Revolut"
+   ─ Usa las clases que ya definimos en index.css: [data-role="tabbar"], .tabbtn,
+   .tab-arrow, .tab-scroll, etc.
+   ─ Si no importabas useRef en este archivo, añade:  import { useRef } from "react";
+   ──────────────────────────────────────────────────────────────────────────── */
+function BottomNav({
+  tabs,
+  current,
+  onChange,
+}: {
+  tabs: Array<{ key: TabKey; label: string; icon: React.ComponentType<{ size?: number }>; emoji?: string }>;
+  current: TabKey;
+  onChange: (k: TabKey) => void;
+}) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const scrollBy = (dx: number) =>
+    scrollerRef.current?.scrollBy({ left: dx, behavior: "smooth" });
+
+  return (
+    <nav className="fixed bottom-0 inset-x-0 z-40">
+      <div className="max-w-md mx-auto px-4 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2">
+        <div data-role="tabbar" className="rounded-2xl p-2 border">
+          <div className="flex items-center gap-2">
+            {/* Flecha izquierda (visible desde sm) */}
+            <button
+              type="button"
+              onClick={() => scrollBy(-160)}
+              className="tab-arrow hidden sm:grid"
+              aria-label="Desplazar a la izquierda"
+            >
+              ‹
+            </button>
+
+            {/* Carrusel de pestañas */}
+            <div
+              ref={scrollerRef}
+              className="tab-scroll scrollbar-hide flex-1 overflow-x-auto flex gap-2 px-1"
+            >
+              <div className="flex gap-2 min-w-full sm:min-w-0">
+                {tabs.map((t) => {
+                  const Icon = t.icon as React.ComponentType<{ size?: number }>;
+                  const active = current === t.key;
+                  return (
+                    <button
+                      key={t.key}
+                      onClick={() => onChange(t.key)}
+                      className="tabbtn flex flex-col items-center justify-center gap-1"
+                      aria-current={active ? "page" : undefined}
+                      aria-label={t.label}
+                    >
+                      <Icon size={20} />
+                      <span className={active ? "font-semibold" : "text-zinc-500 dark:text-zinc-400"}>
+                        {t.emoji ? `${t.emoji} ${t.label}` : t.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Flecha derecha (visible desde sm) */}
+            <button
+              type="button"
+              onClick={() => scrollBy(+160)}
+              className="tab-arrow hidden sm:grid"
+              aria-label="Desplazar a la derecha"
+            >
+              ›
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
   );
 }

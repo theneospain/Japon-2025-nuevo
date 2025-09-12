@@ -2,160 +2,176 @@
 @tailwind components;
 @tailwind utilities;
 
-/* =========================
-   Tema & tokens estilo Revolut
-   ========================= */
+/* ──────────────────────────────────────────────
+   Variables de tema + base
+   ────────────────────────────────────────────── */
+:root {
+  color-scheme: light dark;
+  --bg: #0b0b0e;
+  --bg-grad-1: radial-gradient(1400px 600px at 50% -10%, rgba(120,119,198,.10), transparent 60%);
+  --bg-grad-2: radial-gradient(1000px 500px at 120% 10%, rgba(120,119,198,.08), transparent 60%);
+  --card-bg: rgba(255,255,255,0.85);
+  --card-border: rgba(0,0,0,0.08);
+  --glass: blur(10px) saturate(120%);
+  --shadow-sm: 0 1px 1px rgba(0,0,0,.05);
+  --shadow-md: 0 8px 24px rgba(16,24,40,.10);
+  --shadow-lg: 0 18px 48px rgba(9,12,20,.22);
+}
+
+:root .dark {
+  --bg: #0b0b0e;
+  --card-bg: rgba(16,16,20,0.86);
+  --card-border: #2a2a33; /* ~ zinc-800 */
+  --shadow-sm: 0 1px 1px rgba(0,0,0,.25);
+  --shadow-md: 0 10px 28px rgba(0,0,0,.35);
+  --shadow-lg: 0 22px 60px rgba(0,0,0,.55);
+}
+
+/* Fondo sutil con gradientes (modo Revolut) */
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    Ubuntu, Cantarell, "Noto Sans", Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  background-color: var(--bg);
+  background-image: var(--bg-grad-1), var(--bg-grad-2);
+  background-attachment: fixed;
+}
+
+/* Tipografía algo mayor en móvil y fluida */
 @layer base {
-  :root {
-    /* Light */
-    --bg: #f6f7fb;
-    --text: #0b1220;
-    --muted: #5b6474;
+  html { font-size: clamp(16px, 3.8vw, 18px); }
+  @media (min-width: 640px) { html { font-size: 16px; } }
 
-    --panel: rgba(255,255,255,0.9);
-    --panel-border: rgba(13,18,28,0.08);
-    --panel-blur: 10px;
-
-    --accent1: #6d28d9; /* violeta */
-    --accent2: #06b6d4; /* cian */
-    --ring: rgba(109,40,217,0.35);
-
-    --card-shadow: 0 8px 24px rgba(13,18,28,0.08);
-  }
-
-  .dark {
-    /* Dark “navy” */
-    --bg: #0b0f19;
-    --text: #e5e7eb;
-    --muted: #9aa3b2;
-
-    --panel: rgba(15,17,28,0.82);
-    --panel-border: rgba(255,255,255,0.08);
-    --panel-blur: 12px;
-
-    --ring: rgba(6,182,212,0.35);
-    --card-shadow: 0 10px 28px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04);
-  }
-
-  /* Fondo con sutil gradiente (tipo Revolut) */
-  html, body {
-    height: 100%;
-    background:
-      radial-gradient(1200px 600px at 80% -10%, rgba(6,182,212,0.12), transparent 60%),
-      radial-gradient(900px 500px at -10% 0%, rgba(109,40,217,0.14), transparent 55%),
-      var(--bg);
-    color: var(--text);
-  }
-
-  body {
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji';
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  /* Tipografía un poco mayor en móvil */
-  @media (max-width: 639px) {
-    html { font-size: 17px; }
-    body { line-height: 1.55; }
-  }
-
-  /* Mejores focus rings */
-  *:focus-visible {
-    outline: 0;
-    box-shadow: 0 0 0 2px var(--ring);
-    border-radius: 12px;
-  }
+  h1 { @apply text-2xl font-semibold tracking-tight; }
+  h2 { @apply text-xl  font-semibold; }
+  h3 { @apply text-lg  font-semibold; }
+  p  { @apply leading-relaxed; }
 }
 
-/* =========================
-   Componentes “glass” y chips
-   ========================= */
-@layer components {
-  /* Tarjetas tipo Revolut (se aplica automáticamente a muchas de tus cards) */
-  .dark .rounded-2xl.border,
-  .rounded-2xl.border {
-    background: var(--panel);
-    border-color: var(--panel-border);
-    backdrop-filter: blur(var(--panel-blur));
-    box-shadow: var(--card-shadow);
-  }
+/* ──────────────────────────────────────────────
+   Componentes visuales genéricos (no rompen nada)
+   ────────────────────────────────────────────── */
 
-  /* Navegación inferior estilo glass */
-  .revo-nav {
-    background: var(--panel);
-    border-color: var(--panel-border);
-    backdrop-filter: blur(14px);
-    box-shadow: 0 10px 28px rgba(0,0,0,0.25);
-  }
-
-  /* Botón “pastilla” suave */
-  .btn-soft {
-    @apply rounded-xl border text-sm px-3 py-1.5 transition-colors;
-    border-color: var(--panel-border);
-    background: color-mix(in oklab, var(--panel) 92%, transparent);
-  }
-  .btn-soft:hover { background: color-mix(in oklab, var(--panel) 85%, transparent); }
-
-  /* Chips (etiquetas) */
-  .chip {
-    @apply text-[11px] px-2 py-1 rounded-lg border;
-    border-color: var(--panel-border);
-    background: color-mix(in oklab, var(--panel) 88%, transparent);
-  }
-
-  /* Campos */
-  .field {
-    @apply rounded-xl border px-3 py-2 text-sm bg-white dark:bg-zinc-900;
-    border-color: var(--panel-border);
-  }
-
-  /* Divisor fino */
-  .divider {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--panel-border), transparent);
-  }
-
-  /* Texto con gradiente (para titulares si lo usas) */
-  .text-gradient {
-    background: linear-gradient(90deg, var(--accent1), var(--accent2));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
+/* Tarjetas: cualquier contenedor "rounded-2xl + border" gana glass y sombra */
+.rounded-2xl.border {
+  background: var(--card-bg) !important;
+  border-color: var(--card-border) !important;
+  box-shadow: var(--shadow-md);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
 }
 
-/* =========================
-   Utilidades
-   ========================= */
-@layer utilities {
-  /* Ocultar scrollbar en contenedores horizontales */
-  .scrollbar-none { scrollbar-width: none; }
-  .scrollbar-none::-webkit-scrollbar { display: none; }
-
-  /* Safe-area para iPhone */
-  .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 8px); }
-
-  /* Pequeña animación en elementos activos (tabs, chips, etc.) */
-  .active-bump { transform: translateY(-1px); }
-
-  /* Sombra suave reutilizable */
-  .shadow-revo { box-shadow: var(--card-shadow); }
+/* Hover sutil en botones “píldora” que ya tienes */
+button.rounded-xl,
+button.rounded-2xl,
+a.rounded-xl,
+a.rounded-2xl {
+  transition: transform .12s ease, box-shadow .18s ease, background-color .18s ease;
+}
+button.rounded-xl:hover,
+button.rounded-2xl:hover,
+a.rounded-xl:hover,
+a.rounded-2xl:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
-/* =========================
-   Afinados específicos de tu UI
-   ========================= */
-
-/* Header blur más presente */
-header.backdrop-blur { backdrop-filter: blur(12px); }
-
-/* Botones del bottom nav: icono + etiqueta más legibles */
-.revo-nav button span { letter-spacing: .2px; }
-.revo-nav button[aria-current="page"] {
-  background: color-mix(in oklab, var(--panel) 80%, transparent);
+/* Inputs y selects con glass suave */
+input[type="text"],
+input[type="search"],
+select,
+textarea {
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
 }
 
-/* Progreso, barras y contenedores finos */
-.w-full.h-2.rounded-full { box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); }
+/* Chips (etiquetas pequeñas) más legibles */
+[class*="text-[11px]"].px-2.py-1 {
+  @apply font-medium;
+}
 
-/* Inputs de búsqueda con icono a la izquierda quedan “más revo” */
-input::placeholder { color: var(--muted); opacity: .9; }
+/* Barras de progreso: bordes redondeados completos */
+.w-full.h-2.rounded-full > div {
+  border-radius: 9999px;
+}
+
+/* Mejor contraste del “modo oscuro” en tarjetas internas claras */
+.dark .bg-white\/60 { background-color: rgba(255,255,255,0.04) !important; }
+.dark .text-white\/60 { color: rgba(255,255,255,0.62) !important; }
+.dark .text-white\/50 { color: rgba(255,255,255,0.52) !important; }
+
+/* ──────────────────────────────────────────────
+   TABBAR deslizante con flechas (clases que ya usamos)
+   ────────────────────────────────────────────── */
+
+[data-role="tabbar"] {
+  background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.88));
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
+}
+.dark [data-role="tabbar"] {
+  background: rgba(18,18,22,0.86);
+  border-color: var(--card-border);
+}
+
+/* Carrusel horizontal */
+[data-role="tabbar"] .tab-scroll {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+[data-role="tabbar"] .tabbtn {
+  scroll-snap-align: center;
+  min-width: 95px;          /* asegura legibilidad */
+  height: 56px;             /* tamaño cómodo dedo */
+  padding: 8px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: rgba(255,255,255,.65);
+}
+.dark [data-role="tabbar"] .tabbtn {
+  background: rgba(28,28,34,.55);
+  border-color: var(--card-border);
+}
+[data-role="tabbar"] .tabbtn[aria-current="page"] {
+  background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.90));
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06), var(--shadow-sm);
+}
+.dark [data-role="tabbar"] .tabbtn[aria-current="page"] {
+  background: rgba(40,40,48,.85);
+}
+
+/* Icono + etiqueta */
+[data-role="tabbar"] .tabbtn svg { width: 20px; height: 20px; }
+[data-role="tabbar"] .tabbtn span { font-size: 12px; line-height: 1; }
+
+/* Flechas laterales */
+[data-role="tabbar"] .tab-arrow {
+  width: 36px; height: 36px; border-radius: 9999px;
+  background: rgba(255,255,255,.9);
+  display: grid; place-items: center;
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: var(--shadow-md);
+}
+.dark [data-role="tabbar"] .tab-arrow {
+  background: rgba(22,22,26,.88);
+  border-color: var(--card-border);
+}
+
+/* Oculta scrollbars en el carrusel (iOS/Android/desktop) */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ──────────────────────────────────────────────
+   Ajustes responsive útiles
+   ────────────────────────────────────────────── */
+
+/* Botón “Mapa del día” y similares: evita desbordes de texto */
+button, a, .btn {
+  text-wrap: balance;
+}
+
+/* Safe area en móviles con notch */
+@supports (padding: max(0px)) {
+  .pb-safe { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+}
