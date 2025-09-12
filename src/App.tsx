@@ -39,6 +39,7 @@ import PhotoIdeas from "./components/PhotoIdeas";
 import Game from "./components/Game";
 import { Trophy } from "lucide-react";
 import BottomNav from "./components/BottomNav";
+import CurrencyConverter from "./components/CurrencyConverter";
 
 
 
@@ -396,26 +397,59 @@ function CopyButton({ text, label = "Copiar" }: { text: string; label?: string }
 }
 
 function ConverterCard() {
-  const [rate, setRate] = useState<number>(() => { try { return Number(localStorage.getItem("jp_rate_v1")) || 165; } catch { return 165; } });
+  const rate = 173; // ✅ tasa fija
   const [eur, setEur] = useState<number>(1);
-  const [jpy, setJpy] = useState<number>(() => Math.round(1 * rate));
-  useEffect(() => { try { localStorage.setItem("jp_rate_v1", String(rate)); } catch {} }, [rate]);
-  useEffect(() => { setJpy(Math.round((eur || 0) * rate)); }, [eur, rate]);
-  const onEur = (v: string) => { const n = Number(v.replace(",", ".")); if (!isNaN(n)) setEur(n); };
-  const onJpy = (v: string) => { const n = Number(v.replace(",", ".")); if (!isNaN(n)) { setJpy(n); setEur(n / (rate || 1)); } };
-  const quick = [150, 160, 165, 170, 175];
+  const [jpy, setJpy] = useState<number>(eur * rate);
+
+  const onEur = (v: string) => {
+    const n = Number(v.replace(",", "."));
+    if (!isNaN(n)) {
+      setEur(n);
+      setJpy(n * rate);
+    }
+  };
+
+  const onJpy = (v: string) => {
+    const n = Number(v.replace(",", "."));
+    if (!isNaN(n)) {
+      setJpy(n);
+      setEur(n / rate);
+    }
+  };
+
   return (
-    <SectionCard title="Conversor EUR ↔ JPY" subtitle="Tasa editable · offline">
+    <SectionCard
+      title="Conversor EUR ↔ JPY"
+      subtitle={`Tasa fija · 1 € = ${rate} ¥`}
+    >
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
-          <div><label className="text-xs text-zinc-500 dark:text-zinc-400">Euros (€)</label><input value={Number.isFinite(eur) ? eur.toFixed(2) : ""} onChange={e => onEur(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2" /></div>
-          <div><label className="text-xs text-zinc-500 dark:text-zinc-400">Yenes (¥)</label><input value={Number.isFinite(jpy) ? Math.round(jpy).toString() : ""} onChange={e => onJpy(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2" /></div>
+          <div>
+            <label className="text-xs text-zinc-500 dark:text-zinc-400">
+              Euros (€)
+            </label>
+            <input
+              value={Number.isFinite(eur) ? eur.toFixed(2) : ""}
+              onChange={(e) => onEur(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-zinc-500 dark:text-zinc-400">
+              Yenes (¥)
+            </label>
+            <input
+              value={Number.isFinite(jpy) ? Math.round(jpy).toString() : ""}
+              onChange={(e) => onJpy(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
+            />
+          </div>
         </div>
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2"><span className="text-xs text-zinc-500 dark:text-zinc-400">Tasa:</span><input value={rate} onChange={e => setRate(Number(e.target.value) || 0)} type="number" step="0.5" className="w-24 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 py-1.5 text-sm" /><span className="text-xs text-zinc-500 dark:text-zinc-400">1 € ≈ {Math.round(rate)} ¥</span></div>
-          <div className="flex items-center gap-1">{quick.map(q => <button key={q} onClick={() => setRate(q)} className={`text-xs px-2.5 py-1.5 rounded-lg border ${rate === q ? "border-zinc-900 dark:border-zinc-100" : "border-zinc-200 dark:border-zinc-700"} hover:bg-zinc-100 dark:hover:bg-zinc-800`}>{q}</button>)}</div>
-        </div>
-        <CopyButton text={`${eur.toFixed(2)} € ≈ ${Math.round(jpy)} ¥ (tasa ${rate})`} label="Copiar resultado" />
+
+        <CopyButton
+          text={`${eur.toFixed(2)} € ≈ ${Math.round(jpy)} ¥ (tasa ${rate})`}
+          label="Copiar resultado"
+        />
       </div>
     </SectionCard>
   );
