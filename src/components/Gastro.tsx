@@ -191,36 +191,38 @@ export default function Gastro({ tripId, className }: Props) {
   }
 
   // ✅ Comido en lugares (optimista) + puntos en ranking
-  async function togglePlaceCheck(p: GastroPlace) {
-    const ref = getCheckRef(tripId, "place", p.id, deviceId);
-    const scoreRef = doc(db, "trips", tripId, "game", "scores", deviceId);
-    const was = !!placeChecked[p.id];
+async function togglePlaceCheck(p: GastroPlace) {
+  const ref = getCheckRef(tripId, "place", p.id, deviceId);
+  // ✅ usar colección plana para el ranking
+  const scoreRef = doc(db, "trips", tripId, "game_scores", deviceId);
+  const was = !!placeChecked[p.id];
 
-    // Optimista
-    setPlaceChecked((m) => ({ ...m, [p.id]: !was }));
+  // Optimista
+  setPlaceChecked((m) => ({ ...m, [p.id]: !was }));
 
-    try {
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
-        await Promise.all([
-          deleteDoc(ref),
-          setDoc(scoreRef, { name, points: increment(-1) }, { merge: true }),
-        ]);
-      } else {
-        await Promise.all([
-          setDoc(ref, { at: serverTimestamp(), name }, { merge: true }),
-          setDoc(scoreRef, { name, points: increment(1) }, { merge: true }),
-        ]);
-      }
-    } catch (e) {
-      console.error("togglePlaceCheck error", e);
-      // rollback
-      setPlaceChecked((m) => ({ ...m, [p.id]: was }));
+  try {
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      await Promise.all([
+        deleteDoc(ref),
+        setDoc(scoreRef, { name, points: increment(-1) }, { merge: true }),
+      ]);
+    } else {
+      await Promise.all([
+        setDoc(ref, { at: serverTimestamp(), name }, { merge: true }),
+        setDoc(scoreRef, { name, points: increment(1) }, { merge: true }),
+      ]);
     }
+  } catch (e) {
+    console.error("togglePlaceCheck error", e);
+    // rollback
+    setPlaceChecked((m) => ({ ...m, [p.id]: was }));
   }
+}
 
-  const cities: Array<"Osaka" | "Kyoto" | "Tokyo"> = ["Osaka", "Kyoto", "Tokyo"];
-  const areas = useMemo(() => ["", ...areasByCity(city)], [city]);
+const cities: Array<"Osaka" | "Kyoto" | "Tokyo"> = ["Osaka", "Kyoto", "Tokyo"];
+const areas = useMemo(() => ["", ...areasByCity(city)], [city]);
+
 
   // ────────────────────────────────────────────────────────────────────────────
   // PLATOS (catálogo con filtros + puntos al marcar "Lo probé")
@@ -291,36 +293,54 @@ export default function Gastro({ tripId, className }: Props) {
   }, [filteredDishes, subtab, tripId, deviceId]);
 
   // ✅ Lo probé en platos (optimista) + puntos
-  async function toggleDishCheck(d: Dish) {
-    const ref = getCheckRef(tripId, "dish", d.id, deviceId);
-    const scoreRef = doc(db, "trips", tripId, "game", "scores", deviceId);
-    const was = !!dishChecked[d.id];
+async function toggleDishCheck(d: Dish) {
+  const ref = getCheckRef(tripId, "dish", d.id, deviceId);
+  // 👉 colección plana para el ranking
+  const scoreRef = doc(db, "trips", tripId, "game_scores", deviceId);
+  const was = !!dishChecked[d.id];
 
-    setDishChecked((m) => ({ ...m, [d.id]: !was })); // optimista
+  // Optimista
+  setDishChecked((m) => ({ ...m, [d.id]: !was }));
 
-    try {
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
-        await Promise.all([
-          deleteDoc(ref),
-          setDoc(scoreRef, { name, points: increment(-1) }, { merge: true }),
-        ]);
-      } else {
-        await Promise.all([
-          setDoc(ref, { at: serverTimestamp(), name }, { merge: true }),
-          setDoc(scoreRef, { name, points: increment(1) }, { merge: true }),
-        ]);
-      }
-    } catch (e) {
-      console.error("toggleDishCheck error", e);
-      setDishChecked((m) => ({ ...m, [d.id]: was })); // rollback
+  try {
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      await Promise.all([
+        deleteDoc(ref),
+        setDoc(
+          scoreRef,
+          { name: name || "Invitado", points: increment(-1) },
+          { merge: true }
+        ),
+      ]);
+    } else {
+      await Promise.all([
+        setDoc(
+          ref,
+          { at: serverTimestamp(), name: name || "Invitado" },
+          { merge: true }
+        ),
+        setDoc(
+          scoreRef,
+          { name: name || "Invitado", points: increment(1) },
+          { merge: true }
+        ),
+      ]);
     }
+  } catch (e) {
+    console.error("toggleDishCheck error", e);
+    // rollback
+    setDishChecked((m) => ({ ...m, [d.id]: was }));
   }
+}
 
-  // Guarda el nombre que se usa para puntos
-  useEffect(() => {
+// Guarda el nombre que se usa para puntos
+useEffect(() => {
+  try {
     localStorage.setItem(NAME_KEY, name);
-  }, [name]);
+  } catch {}
+}, [name]);
+
 
   // ────────────────────────────────────────────────────────────────────────────
 
