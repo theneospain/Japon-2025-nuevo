@@ -40,6 +40,8 @@ import Game from "./components/Game";
 import { Trophy } from "lucide-react";
 import BottomNav from "./components/BottomNav";
 import CurrencyConverter from "./components/CurrencyConverter";
+import { PlaneTakeoff } from "lucide-react";
+import FlightInfoAlba from "./components/FlightInfoAlba";
 
 
 
@@ -67,6 +69,8 @@ const TABS = [
   { key: "gastro", label: "Gastronomía", icon: Utensils, emoji: "🍣" },
   { key: "photo", label: "Ideas foto", icon: Camera, emoji: "📷" },
   { key: "game", label: "Ranking", icon: Trophy, emoji: "🏆" },
+  { key: "flight", label: "Vuelo", icon: PlaneTakeoff, emoji: "🛫" },
+
 ] as const;
 
 
@@ -1347,6 +1351,13 @@ export default function JapanTripApp() {
                   >
                     <Game tripId="japon-2025" />
                   </SectionCard>
+                </section>
+              )}
+
+              {/* INFO VUELO */}
+              {tab === "flight" && (
+                <section id="flight">
+                  <FlightInfoAlba />
                 </section>
               )}
             </motion.div>
