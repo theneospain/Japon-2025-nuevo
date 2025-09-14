@@ -1,8 +1,12 @@
-import React, { useEffect, useMemo, useState } from "react"; 
+import React, { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+
+// Icons (todo en un único import, ya con alias correctos)
 import {
-  CalendarRange,
+  CalendarRange as Calendar, // 👉 se usará como Calendar
   Info,
-  MapPin,
+  Map as MapIcon,            // 👉 se usará como MapIcon
+  MapPin as Locate,          // 👉 se usará como Locate
   Wallet,
   Sun,
   Moon,
@@ -19,7 +23,6 @@ import {
   Copy,
   ExternalLink,
   Search,
-  Map,
   Train,
   Languages,
   Wifi,
@@ -27,24 +30,23 @@ import {
   ListChecks,
   Shuffle,
   BookOpen,
+  Camera,
+  Trophy,
+  PlaneTakeoff as Plane,     // 👉 se usará como Plane
 } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+
+// Componentes propios
 import PhotoGallery from "./components/PhotoGallery";
 import MapDayButton from "./components/MapDayButton";
 import NotesLite from "./components/NotesLite";
 import { makeBlockId } from "./utils/slug";
 import Gastro from "./components/Gastro";
-import { Camera /* …ya tienes más iconos aquí */ } from "lucide-react";
 import PhotoIdeas from "./components/PhotoIdeas";
 import Game from "./components/Game";
-import { Trophy } from "lucide-react";
 import BottomNav from "./components/BottomNav";
 import CurrencyConverter from "./components/CurrencyConverter";
-import { PlaneTakeoff } from "lucide-react";
 import FlightInfoAlba from "./components/FlightInfoAlba";
-
-
-
+import TripMap from "./components/TripMap";
 
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -53,6 +55,7 @@ import FlightInfoAlba from "./components/FlightInfoAlba";
 function lines(...xs: Array<string | undefined | null | false>) {
   return xs.filter(Boolean).join("\n");
 }
+
 function formatEUR(n: number) {
   try {
     return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(n || 0);
@@ -61,51 +64,75 @@ function formatEUR(n: number) {
   }
 }
 
+// Tabs principales de la app (usa Map como MapIcon en los imports)
 const TABS = [
-  { key: "itinerary", label: "Itinerario", icon: CalendarRange, emoji: "🗓️" },
-  { key: "info", label: "Info práctica", icon: Info, emoji: "ℹ️" },
-  { key: "places", label: "Lugares", icon: MapPin, emoji: "📍" },
-  { key: "expenses", label: "Gastos", icon: Wallet, emoji: "💶" },
-  { key: "gastro", label: "Gastronomía", icon: Utensils, emoji: "🍣" },
-  { key: "photo", label: "Ideas foto", icon: Camera, emoji: "📷" },
-  { key: "game", label: "Ranking", icon: Trophy, emoji: "🏆" },
-  { key: "flight", label: "Vuelo", icon: PlaneTakeoff, emoji: "🛫" },
-
+  { key: "itinerary", label: "Itinerario",    icon: Calendar, emoji: "📅" },
+  { key: "map",       label: "Mapa",          icon: MapIcon,  emoji: "🗺️" }, // ← NUEVO
+  { key: "info",      label: "Info práctica", icon: Info,     emoji: "ℹ️" },
+  { key: "places",    label: "Lugares",       icon: Locate,   emoji: "📍" },
+  { key: "expenses",  label: "Gastos",        icon: Wallet,   emoji: "💳" },
+  { key: "gastro",    label: "Gastronomía",   icon: Utensils, emoji: "🍣" },
+  { key: "photo",     label: "Ideas foto",    icon: Camera,   emoji: "📷" },
+  { key: "game",      label: "Ranking",       icon: Trophy,   emoji: "🏆" },
+  { key: "flight",    label: "Vuelos",        icon: Plane,    emoji: "🛫" },
 ] as const;
-
 
 type TabKey = typeof TABS[number]["key"];
 
+// Tema claro/oscuro con persistencia en localStorage y soporte SSR
 function useTheme() {
   const getInitial = () => {
     if (typeof window === "undefined") return "light" as const;
-    const saved = localStorage.getItem("jp_theme");
-    if (saved === "light" || saved === "dark") return saved as "light" | "dark";
-    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-    return prefersDark ? "dark" : "light";
+    try {
+      const saved = localStorage.getItem("jp_theme");
+      if (saved === "light" || saved === "dark") return saved as "light" | "dark";
+      const prefersDark =
+        typeof window !== "undefined" &&
+        window.matchMedia?.("(prefers-color-scheme: dark)")?.matches;
+      return prefersDark ? "dark" : "light";
+    } catch {
+      return "light" as const;
+    }
   };
+
   const [theme, setTheme] = useState<"light" | "dark">(getInitial);
   useEffect(() => {
     try {
       localStorage.setItem("jp_theme", theme);
     } catch {}
   }, [theme]);
+
   return { theme, setTheme } as const;
 }
 
-function SectionCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+// Contenedor visual reutilizable
+function SectionCard({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="rounded-2xl p-4 shadow-sm
-                    bg-white border border-zinc-200
-                    dark:bg-[var(--card-bg)] dark:border-[var(--card-border)]">
+    <div
+      className="rounded-2xl p-4 shadow-sm
+                 bg-white border border-zinc-200
+                 dark:bg-[var(--card-bg)] dark:border-[var(--card-border)]"
+    >
       <div className="mb-2">
         <h3 className="text-[17px] font-semibold leading-tight">{title}</h3>
-        {subtitle && <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-1">{subtitle}</p>}
+        {subtitle && (
+          <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-1">{subtitle}</p>
+        )}
       </div>
       {children}
     </div>
   );
 }
+
+
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Bloque 1: Meta del viaje
@@ -1252,7 +1279,7 @@ export default function JapanTripApp() {
   const { theme, setTheme } = useTheme();
   const [tab, setTab] = useState<TabKey>("itinerary");
 
-  // 👉 Normalizamos TABS aquí para evitar el error "never"
+  // 👉 Normalizamos TABS para evitar errores con el tipo `never`
   type TabLike = {
     key: TabKey;
     label: string;
@@ -1262,7 +1289,7 @@ export default function JapanTripApp() {
   const tabs = (TABS as unknown as TabLike[]);
 
   useEffect(() => {
-    // Smoke tests básicos (no rompen la UI)
+    // Smoke tests ligeros
     try {
       console.assert(lines("a", "b") === "a\nb", "lines une con \\n");
       console.assert(lines("a", "", null, "c") === "a\nc", "lines filtra vacíos");
@@ -1276,7 +1303,7 @@ export default function JapanTripApp() {
   }, []);
 
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
-  const currentTab = tabs.find(t => t.key === tab);
+  const currentTab = tabs.find((t) => t.key === tab);
 
   return (
     <div className={theme === "dark" ? "dark" : ""}>
@@ -1314,6 +1341,19 @@ export default function JapanTripApp() {
               className="space-y-4"
             >
               {tab === "itinerary" && <Itinerary />}
+
+              {/* MAPA (My Maps embebido) */}
+              {tab === "map" && (
+                <section id="map">
+                  <SectionCard
+                    title="Mapa del viaje 🗺️"
+                    subtitle="Todos los puntos del itinerario en Google My Maps"
+                  >
+                    <TripMap myMapsUrl="https://www.google.com/maps/d/u/0/viewer?mid=1Or4fHGEm9zQP0oxTXkJ7JGrgNBVovns&ll=35.375985905939594,135.82507178797033&z=6" />
+                  </SectionCard>
+                </section>
+              )}
+
               {tab === "info" && <InfoPractical />}
               {tab === "places" && <PlacesSection />}
               {tab === "expenses" && <ExpensesSection />}
@@ -1364,14 +1404,9 @@ export default function JapanTripApp() {
           </AnimatePresence>
         </main>
 
-        {/* Nuevo menú inferior con carrusel + flechas */}
-        <BottomNav
-          tabs={tabs}
-          current={tab}
-          onChange={(k) => setTab(k as TabKey)}
-        />
+        {/* Menú inferior en carrusel */}
+        <BottomNav tabs={tabs} current={tab} onChange={(k) => setTab(k as TabKey)} />
       </div>
     </div>
   );
 }
-
