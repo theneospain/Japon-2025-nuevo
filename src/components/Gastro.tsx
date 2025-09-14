@@ -347,52 +347,54 @@ useEffect(() => {
   return (
     <div className={`space-y-4 ${className || ""}`}>
       {/* Subpestañas */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => setSubtab("lugares")}
-          className={`text-sm px-3 py-1.5 rounded-lg border ${
-            subtab === "lugares"
-              ? "border-zinc-900 dark:border-zinc-100"
-              : "border-zinc-200 dark:border-zinc-700"
-          } hover:bg-zinc-100 dark:hover:bg-zinc-800`}
-        >
-          📍 Lugares
-        </button>
-        <button
-          onClick={() => setSubtab("imprescindibles")}
-          className={`text-sm px-3 py-1.5 rounded-lg border ${
-            subtab === "imprescindibles"
-              ? "border-zinc-900 dark:border-zinc-100"
-              : "border-zinc-200 dark:border-zinc-700"
-          } hover:bg-zinc-100 dark:hover:bg-zinc-800`}
-        >
-          ⭐ Imprescindibles
-        </button>
-        <button
-          onClick={() => setSubtab("platos")}
-          className={`text-sm px-3 py-1.5 rounded-lg border ${
-            subtab === "platos"
-              ? "border-zinc-900 dark:border-zinc-100"
-              : "border-zinc-200 dark:border-zinc-700"
-          } hover:bg-zinc-100 dark:hover:bg-zinc-800`}
-        >
-          🍱 Platos
-        </button>
+<div className="flex flex-wrap items-center gap-2">
+  <button
+    onClick={() => setSubtab("lugares")}
+    className={`text-sm px-3 py-1.5 rounded-lg border ${
+      subtab === "lugares"
+        ? "border-zinc-900 dark:border-zinc-100"
+        : "border-zinc-200 dark:border-zinc-700"
+    } hover:bg-zinc-100 dark:hover:bg-zinc-800`}
+  >
+    📍 Lugares
+  </button>
 
-        {/* Nombre del jugador */}
-        <div className="ml-auto flex items-center gap-2 text-xs">
-          <span className="opacity-70">Jugador:</span>
-          <input
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              localStorage.setItem(NAME_KEY, e.target.value);
-            }}
-            className="rounded-lg px-2 py-1 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900"
-            placeholder="Tu nombre"
-          />
-        </div>
-      </div>
+  <button
+    onClick={() => setSubtab("imprescindibles")}
+    className={`text-sm px-3 py-1.5 rounded-lg border ${
+      subtab === "imprescindibles"
+        ? "border-zinc-900 dark:border-zinc-100"
+        : "border-zinc-200 dark:border-zinc-700"
+    } hover:bg-zinc-100 dark:hover:bg-zinc-800`}
+  >
+    ⭐ Imprescindibles
+  </button>
+
+  <button
+    onClick={() => setSubtab("platos")}
+    className={`text-sm px-3 py-1.5 rounded-lg border ${
+      subtab === "platos"
+        ? "border-zinc-900 dark:border-zinc-100"
+        : "border-zinc-200 dark:border-zinc-700"
+    } hover:bg-zinc-100 dark:hover:bg-zinc-800`}
+  >
+    🍱 Platos
+  </button>
+
+  {/* Nombre del jugador – capado para móvil */}
+  <div className="ml-auto flex items-center gap-2 text-xs shrink-0 min-w-0">
+    <span className="opacity-70 hidden sm:inline">Jugador:</span>
+    <input
+      value={name}
+      onChange={(e) => {
+        setName(e.target.value);
+        localStorage.setItem(NAME_KEY, e.target.value);
+      }}
+      className="rounded-lg px-2 py-1 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 w-[120px] sm:w-[140px] max-w-[45vw] min-w-0 truncate"
+      placeholder="Tu nombre"
+    />
+  </div>
+</div>
 
       {/* IMPRESCINDIBLES */}
       {subtab === "imprescindibles" && <GastroMustEat tripId={tripId} />}
@@ -462,30 +464,39 @@ useEffect(() => {
           </div>
 
           {/* Sorpresa del día */}
-          {surprise && (
-            <div className="rounded-2xl border border-white/10 p-3">
-              <div className="text-xs text-white/60 mb-1">🎲 Sorpresa del día</div>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <div className="text-lg font-semibold">{surprise.name}</div>
-                  <div className="text-sm text-white/60">
-                    {surprise.city} • {surprise.area} • {surprise.cuisine} •{" "}
-                    {priceLabel(surprise.price)}
-                  </div>
-                </div>
-                <a
-                  className="rounded-xl bg-white text-black px-3 py-2 text-sm font-semibold"
-                  href={surprise.gmaps}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <span className="inline-flex items-center gap-1">
-                    <MapPin size={16} /> Abrir en Maps
-                  </span>
-                </a>
-              </div>
-            </div>
-          )}
+{surprise && (
+  <div className="rounded-2xl border border-zinc-200/20 dark:border-zinc-800 p-3">
+    <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">
+      🎲 Sorpresa del día
+    </div>
+
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      {/* Texto: permitir truncado y evitar que empuje el layout */}
+      <div className="min-w-0">
+        <div className="text-lg font-semibold truncate">
+          {surprise.name}
+        </div>
+        <div className="text-sm text-zinc-500 dark:text-zinc-400 truncate">
+          {surprise.city} • {surprise.area} • {surprise.cuisine} • {priceLabel(surprise.price)}
+        </div>
+      </div>
+
+      {/* Botón: no partir en varias líneas, sin desbordar el ancho */}
+      <a
+        className="rounded-xl bg-white text-black px-3 py-2 text-sm font-semibold whitespace-nowrap shadow hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+        href={surprise.gmaps}
+        target="_blank"
+        rel="noreferrer"
+        aria-label={`Abrir en Maps: ${surprise.name}`}
+      >
+        <span className="inline-flex items-center gap-1">
+          <MapPin size={16} /> Abrir en Maps
+        </span>
+      </a>
+    </div>
+  </div>
+)}
+
 
           {/* Lista de lugares */}
           <div className="space-y-3">

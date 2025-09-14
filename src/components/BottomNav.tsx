@@ -22,7 +22,7 @@ export default function BottomNav({
     scrollerRef.current?.scrollBy({ left: dx, behavior: "smooth" });
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-40 pointer-events-none">
+    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-40">
       <div className="max-w-md mx-auto px-4 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2">
         <div className="relative">
           {/* Flecha izquierda */}
