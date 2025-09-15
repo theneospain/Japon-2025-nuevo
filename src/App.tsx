@@ -1,53 +1,44 @@
+// ──────────────────────────────────────────────────────────────────────────────
+// App.tsx — BLOQUE INICIAL CORREGIDO (pegar al inicio del archivo)
+// ──────────────────────────────────────────────────────────────────────────────
+
 import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
-// Icons (todo en un único import, ya con alias correctos)
 import {
-  CalendarRange as Calendar, // 👉 se usará como Calendar
+  CalendarRange as Calendar, // 📅 alias directo
   Info,
-  Map as MapIcon,            // 👉 se usará como MapIcon
-  MapPin as Locate,          // 👉 se usará como Locate
+  Map as MapIcon,            // 🗺️ evita colisión con Map nativo
+  MapPin as Locate,
   Wallet,
-  Sun,
-  Moon,
-  CheckCircle,
-  ChevronDown,
-  Heart,
-  Star,
-  Utensils,
-  Share2,
-  Calculator,
-  Users,
-  Plus,
-  Trash2,
-  Copy,
-  ExternalLink,
-  Search,
-  Train,
-  Languages,
-  Wifi,
-  Download,
-  ListChecks,
-  Shuffle,
-  BookOpen,
-  Camera,
-  Trophy,
-  PlaneTakeoff as Plane,     // 👉 se usará como Plane
+  Sun, Moon,
+  CheckCircle, ChevronDown, Heart, Star, Share2, Calculator,
+  Users, Plus, Trash2, Copy, ExternalLink, Search, Train, Languages,
+  Wifi, Download, ListChecks, Shuffle, BookOpen,
+  Utensils, Camera, Trophy,
+  PlaneTakeoff as Plane,
 } from "lucide-react";
 
 // Componentes propios
-import PhotoGallery from "./components/PhotoGallery";
-import MapDayButton from "./components/MapDayButton";
-import NotesLite from "./components/NotesLite";
-import { makeBlockId } from "./utils/slug";
-import Gastro from "./components/Gastro";
-import PhotoIdeas from "./components/PhotoIdeas";
-import Game from "./components/Game";
 import BottomNav from "./components/BottomNav";
+import TripMap from "./components/TripMap";
+import MapDayButton from "./components/MapDayButton";
+import PhotoGallery from "./components/PhotoGallery";
+import PhotoIdeas from "./components/PhotoIdeas";
+import Gastro from "./components/Gastro";
+import NotesLite from "./components/NotesLite";
 import CurrencyConverter from "./components/CurrencyConverter";
 import FlightInfoAlba from "./components/FlightInfoAlba";
-import TripMap from "./components/TripMap";
 
+// Utils
+import { makeBlockId } from "./utils/slug";
+
+import Game from "./components/Game";
+
+
+// ⚠️ Compat temporal: si en el resto del archivo aún aparece "Photodeals",
+// este alias evita errores hasta que renombres a PhotoIdeas.
+const Photodeals = PhotoIdeas;
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Utilidades
@@ -55,7 +46,6 @@ import TripMap from "./components/TripMap";
 function lines(...xs: Array<string | undefined | null | false>) {
   return xs.filter(Boolean).join("\n");
 }
-
 function formatEUR(n: number) {
   try {
     return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(n || 0);
@@ -64,10 +54,10 @@ function formatEUR(n: number) {
   }
 }
 
-// Tabs principales de la app (usa Map como MapIcon en los imports)
+// Tabs principales (los iconos usan los alias anteriores)
 const TABS = [
   { key: "itinerary", label: "Itinerario",    icon: Calendar, emoji: "📅" },
-  { key: "map",       label: "Mapa",          icon: MapIcon,  emoji: "🗺️" }, // ← NUEVO
+  { key: "map",       label: "Mapa",          icon: MapIcon,  emoji: "🗺️" },
   { key: "info",      label: "Info práctica", icon: Info,     emoji: "ℹ️" },
   { key: "places",    label: "Lugares",       icon: Locate,   emoji: "📍" },
   { key: "expenses",  label: "Gastos",        icon: Wallet,   emoji: "💳" },
@@ -77,9 +67,11 @@ const TABS = [
   { key: "flight",    label: "Vuelos",        icon: Plane,    emoji: "🛫" },
 ] as const;
 
-type TabKey = typeof TABS[number]["key"];
+type TabKey = (typeof TABS)[number]["key"];
 
-// Tema claro/oscuro con persistencia en localStorage y soporte SSR
+// ──────────────────────────────────────────────────────────────────────────────
+// Tema claro/oscuro con persistencia
+// ──────────────────────────────────────────────────────────────────────────────
 function useTheme() {
   const getInitial = () => {
     if (typeof window === "undefined") return "light" as const;
@@ -97,15 +89,15 @@ function useTheme() {
 
   const [theme, setTheme] = useState<"light" | "dark">(getInitial);
   useEffect(() => {
-    try {
-      localStorage.setItem("jp_theme", theme);
-    } catch {}
+    try { localStorage.setItem("jp_theme", theme); } catch {}
   }, [theme]);
 
   return { theme, setTheme } as const;
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
 // Contenedor visual reutilizable
+// ──────────────────────────────────────────────────────────────────────────────
 function SectionCard({
   title,
   subtitle,
@@ -124,15 +116,15 @@ function SectionCard({
       <div className="mb-2">
         <h3 className="text-[17px] font-semibold leading-tight">{title}</h3>
         {subtitle && (
-          <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-1">{subtitle}</p>
+          <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-1">
+            {subtitle}
+          </p>
         )}
       </div>
       {children}
     </div>
   );
 }
-
-
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Bloque 1: Meta del viaje
@@ -142,12 +134,27 @@ function TripMeta() {
   const end   = useMemo(() => new Date(2025, 10, 4), []); // 4 nov 2025
   const today = new Date();
 
-  const days    = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86400000) + 1);
-  const elapsed = today < start ? 0 : today > end ? days : Math.min(days, Math.floor((today.getTime() - start.getTime()) / 86400000) + 1);
+  const days = Math.max(
+    1,
+    Math.ceil((end.getTime() - start.getTime()) / 86400000) + 1
+  );
+  const elapsed =
+    today < start
+      ? 0
+      : today > end
+      ? days
+      : Math.min(
+          days,
+          Math.floor((today.getTime() - start.getTime()) / 86400000) + 1
+        );
   const progress = Math.round((elapsed / days) * 100);
-  const status = today < start
-    ? `Comienza en ${Math.ceil((start.getTime() - today.getTime()) / 86400000)} días`
-    : today > end
+
+  const status =
+    today < start
+      ? `Comienza en ${Math.ceil(
+          (start.getTime() - today.getTime()) / 86400000
+        )} días`
+      : today > end
       ? "Viaje finalizado"
       : "¡Viaje en curso!";
 
@@ -157,32 +164,59 @@ function TripMeta() {
         <span>20 oct → 4 nov 2025</span>
         <span>Grupo: 11 personas</span>
       </div>
+
       <div className="w-full h-3 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-        <div className="h-full bg-zinc-900 dark:bg-zinc-100" style={{ width: `${progress}%` }} />
+        <div
+          className="h-full bg-zinc-900 dark:bg-zinc-100"
+          style={{ width: `${progress}%` }}
+        />
       </div>
+
       <div className="flex items-center justify-between text-sm">
         <span className="text-zinc-600 dark:text-zinc-300">Progreso</span>
-        <span className="font-medium">{progress}% · {status}</span>
+        <span className="font-medium">
+          {progress}% · {status}
+        </span>
       </div>
     </div>
   );
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// FIN DEL BLOQUE INICIAL CORREGIDO
+// ──────────────────────────────────────────────────────────────────────────────
+
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Bloque 2: Itinerario con checks + stops opcionales
 // ──────────────────────────────────────────────────────────────────────────────
+
+// Stop de una actividad: enlace a Google Maps y, opcionalmente, placeId oficial
+type ActivityStop = { gmaps: string; placeId?: string };
+
 type Activity = {
   time?: string | null;
   text: string;
-  stop?: { gmaps: string; placeId?: string }; // ✅ Enlace a Google Maps por actividad (opcional)
+  stop?: ActivityStop; // ✅ Enlace a Google Maps por actividad (opcional)
 };
 
-type DayPlan  = {
-  date: string;
+type DayPlan = {
+  date: string;        // YYYY-MM-DD
   city: string;
   emoji?: string;
   activities: Activity[];
 };
+
+// Helper para generar enlaces de Google Maps (con soporte de placeId si lo tienes)
+function g(query: string, placeId?: string): ActivityStop {
+  const q = encodeURIComponent(query);
+  return {
+    gmaps: placeId
+      ? `https://www.google.com/maps/search/?api=1&query=${q}&query_place_id=${placeId}`
+      : `https://www.google.com/maps/search/?api=1&query=${q}`,
+    placeId,
+  };
+}
 
 const ITINERARY: DayPlan[] = [
   {
@@ -206,7 +240,7 @@ const ITINERARY: DayPlan[] = [
       {
         time: "Tarde/Noche",
         text: "Namba, Den-Den Town, Dotonbori, Kuromon, Glico, Don Quijote, Namba Yasaka, Shinsaibashi, Karaoke",
-        // Puedes dejar este bloque sin stops por ser plan abierto de paseo nocturno
+        // Plan abierto: sin stops concretos
       },
     ],
   },
@@ -216,12 +250,12 @@ const ITINERARY: DayPlan[] = [
     city: "Osaka",
     emoji: "🏯",
     activities: [
-      { text: "Castillo de Osaka", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Osaka%20Castle" } },
-      { text: "Umeda Sky", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Umeda%20Sky%20Building" } },
-      { text: "Acuario Kaiyukan", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Osaka%20Aquarium%20Kaiyukan" } },
-      { text: "Templo Shitennoji", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Shitenno-ji%20Temple" } },
-      { text: "Isshinji", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Isshinji%20Temple%20Osaka" } },
-      { text: "Sumiyoshi Taisha", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Sumiyoshi%20Taisha" } },
+      { text: "Castillo de Osaka", stop: g("Osaka Castle") },
+      { text: "Umeda Sky", stop: g("Umeda Sky Building") },
+      { text: "Acuario Kaiyukan", stop: g("Osaka Aquarium Kaiyukan") },
+      { text: "Templo Shitennoji", stop: g("Shitenno-ji Temple") },
+      { text: "Isshinji", stop: g("Isshinji Temple Osaka") },
+      { text: "Sumiyoshi Taisha", stop: g("Sumiyoshi Taisha") },
     ],
   },
 
@@ -230,8 +264,8 @@ const ITINERARY: DayPlan[] = [
     city: "Universal + Shinsekai",
     emoji: "🎢",
     activities: [
-      { text: "Universal Studios Japan", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Universal%20Studios%20Japan" } },
-      { text: "Shinsekai (Tsutenkaku)", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Tsutenkaku%20Tower" } },
+      { text: "Universal Studios Japan", stop: g("Universal Studios Japan") },
+      { text: "Shinsekai (Tsutenkaku)", stop: g("Tsutenkaku Tower") },
     ],
   },
 
@@ -240,8 +274,8 @@ const ITINERARY: DayPlan[] = [
     city: "Hiroshima + Miyajima",
     emoji: "⛩️",
     activities: [
-      { text: "Excursión a Hiroshima", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Hiroshima%20Peace%20Memorial%20Park" } },
-      { text: "Miyajima (torii flotante)", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Itsukushima%20Shrine" } },
+      { text: "Excursión a Hiroshima", stop: g("Hiroshima Peace Memorial Park") },
+      { text: "Miyajima (torii flotante)", stop: g("Itsukushima Shrine") },
     ],
   },
 
@@ -250,9 +284,9 @@ const ITINERARY: DayPlan[] = [
     city: "Nara",
     emoji: "🦌",
     activities: [
-      { text: "Templo Todai-ji", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Todai-ji%20Temple" } },
-      { text: "Parque de ciervos", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Nara%20Park" } },
-      { text: "Kasuga Taisha", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Kasuga%20Taisha" } },
+      { text: "Templo Todai-ji", stop: g("Todai-ji Temple") },
+      { text: "Parque de ciervos", stop: g("Nara Park") },
+      { text: "Kasuga Taisha", stop: g("Kasuga Taisha") },
     ],
   },
 
@@ -262,8 +296,8 @@ const ITINERARY: DayPlan[] = [
     emoji: "🚄",
     activities: [
       { text: "Osaka → Kioto" },
-      { time: "Tarde", text: "Castillo de Nijo", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Nijo%20Castle" } },
-      { text: "Kyoto Tower", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Kyoto%20Tower" } },
+      { time: "Tarde", text: "Castillo de Nijo", stop: g("Nijo Castle") },
+      { text: "Kyoto Tower", stop: g("Kyoto Tower") },
     ],
   },
 
@@ -272,11 +306,11 @@ const ITINERARY: DayPlan[] = [
     city: "Kioto",
     emoji: "⛩️",
     activities: [
-      { text: "Fushimi Inari", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Fushimi%20Inari%20Taisha" } },
-      { text: "Sannenzaka & Ninenzaka", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Sannenzaka%20Ninenzaka" } },
-      { text: "Kinkaku-ji", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Kinkaku-ji" } },
-      { text: "Heian", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Heian%20Shrine" } },
-      { text: "Gion y Pontocho", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Gion%20Pontocho" } },
+      { text: "Fushimi Inari", stop: g("Fushimi Inari Taisha") },
+      { text: "Sannenzaka & Ninenzaka", stop: g("Sannenzaka Ninenzaka") },
+      { text: "Kinkaku-ji", stop: g("Kinkaku-ji") },
+      { text: "Heian", stop: g("Heian Shrine") },
+      { text: "Gion y Pontocho", stop: g("Gion Pontocho") },
     ],
   },
 
@@ -285,12 +319,12 @@ const ITINERARY: DayPlan[] = [
     city: "Arashiyama + opciones",
     emoji: "🎋",
     activities: [
-      { text: "Bosque de bambú", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Arashiyama%20Bamboo%20Grove" } },
-      { text: "Otagi Nenbutsu-ji", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Otagi%20Nenbutsu-ji" } },
-      { text: "Opcional: Ginkaku-ji", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Ginkaku-ji" } },
-      { text: "Opcional: Kiyomizudera", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Kiyomizu-dera" } },
-      { text: "Opcional: Ryoan-ji", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Ryoan-ji" } },
-      { text: "Opcional: Kibune", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Kibune" } },
+      { text: "Bosque de bambú", stop: g("Arashiyama Bamboo Grove") },
+      { text: "Otagi Nenbutsu-ji", stop: g("Otagi Nenbutsu-ji") },
+      { text: "Opcional: Ginkaku-ji", stop: g("Ginkaku-ji") },
+      { text: "Opcional: Kiyomizudera", stop: g("Kiyomizu-dera") },
+      { text: "Opcional: Ryoan-ji", stop: g("Ryoan-ji") },
+      { text: "Opcional: Kibune", stop: g("Kibune") },
     ],
   },
 
@@ -300,10 +334,10 @@ const ITINERARY: DayPlan[] = [
     emoji: "🚄",
     activities: [
       { text: "Kioto → Tokio" },
-      { text: "Opcional: Shirakawa-go", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Shirakawa-go" } },
-      { text: "Godzilla Shinjuku", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Godzilla%20Head%20Shinjuku" } },
-      { text: "Mirador Gobierno Metropolitano", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Tokyo%20Metropolitan%20Government%20Building%20Observatory" } },
-      { text: "Kabukicho, Cruce Shibuya, Hachiko", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Shibuya%20Crossing%20Hachiko" } },
+      { text: "Opcional: Shirakawa-go", stop: g("Shirakawa-go") },
+      { text: "Godzilla Shinjuku", stop: g("Godzilla Head Shinjuku") },
+      { text: "Mirador Gobierno Metropolitano", stop: g("Tokyo Metropolitan Government Building Observatory") },
+      { text: "Kabukicho, Cruce Shibuya, Hachiko", stop: g("Shibuya Crossing Hachiko") },
     ],
   },
 
@@ -312,9 +346,9 @@ const ITINERARY: DayPlan[] = [
     city: "Harajuku + Akihabara + Kart",
     emoji: "🎮",
     activities: [
-      { text: "Harajuku (Takeshita)", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Takeshita%20Street" } },
-      { text: "Akihabara (maid café, figuras)", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Akihabara" } },
-      { time: "Noche", text: "Kart (con PIC)" }, // actividad con punto de encuentro variable
+      { text: "Harajuku (Takeshita)", stop: g("Takeshita Street") },
+      { text: "Akihabara (maid café, figuras)", stop: g("Akihabara") },
+      { time: "Noche", text: "Kart (con PIC)" }, // punto de encuentro variable
     ],
   },
 
@@ -323,9 +357,9 @@ const ITINERARY: DayPlan[] = [
     city: "Hakone (Monte Fuji)",
     emoji: "🗻",
     activities: [
-      { text: "Hakone", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Hakone" } },
-      { text: "Teleférico Owakudani", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Owakudani" } },
-      { text: "Vistas del Fuji (si clima)", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Mt%20Fuji%20viewpoint%20Hakone" } },
+      { text: "Hakone", stop: g("Hakone") },
+      { text: "Teleférico Owakudani", stop: g("Owakudani") },
+      { text: "Vistas del Fuji (si clima)", stop: g("Mt Fuji viewpoint Hakone") },
     ],
   },
 
@@ -334,9 +368,9 @@ const ITINERARY: DayPlan[] = [
     city: "Asakusa + Roppongi + Tokyo Tower",
     emoji: "🏮",
     activities: [
-      { text: "Asakusa (Sensō-ji + Nakamise)", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Senso-ji%20Nakamise" } },
-      { text: "Roppongi", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Roppongi%20Hills" } },
-      { text: "Tokyo Tower", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Tokyo%20Tower" } },
+      { text: "Asakusa (Sensō-ji + Nakamise)", stop: g("Senso-ji Nakamise") },
+      { text: "Roppongi", stop: g("Roppongi Hills") },
+      { text: "Tokyo Tower", stop: g("Tokyo Tower") },
     ],
   },
 
@@ -345,8 +379,8 @@ const ITINERARY: DayPlan[] = [
     city: "Parques / Nikkō / Kasukabe",
     emoji: "🎢",
     activities: [
-      { text: "Disneyland / DisneySea", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Tokyo%20Disney%20Resort" } },
-      { text: "Nikkō", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Nikko%20Toshogu%20Shrine" } },
+      { text: "Disneyland / DisneySea", stop: g("Tokyo Disney Resort") },
+      { text: "Nikkō", stop: g("Nikko Toshogu Shrine") },
       { text: "Kasukabe" }, // libre
     ],
   },
@@ -356,10 +390,10 @@ const ITINERARY: DayPlan[] = [
     city: "Meiji + Ginza + Odaiba",
     emoji: "🛍️",
     activities: [
-      { text: "Santuario Meiji", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Meiji%20Jingu" } },
-      { text: "Ginza (sushi)", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Ginza" } },
-      { text: "Shiodome → Yurikamome a Odaiba", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Yurikamome%20Line" } },
-      { text: "Rainbow Bridge, Gundam, barco Sumida", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=Odaiba%20Gundam%20Rainbow%20Bridge" } },
+      { text: "Santuario Meiji", stop: g("Meiji Jingu") },
+      { text: "Ginza (sushi)", stop: g("Ginza") },
+      { text: "Shiodome → Yurikamome a Odaiba", stop: g("Yurikamome Line") },
+      { text: "Rainbow Bridge, Gundam, barco Sumida", stop: g("Odaiba Gundam Rainbow Bridge") },
     ],
   },
 
@@ -368,19 +402,19 @@ const ITINERARY: DayPlan[] = [
     city: "Tokio (libre) + Vuelo",
     emoji: "🧳",
     activities: [
-      { time: "Mañana", text: "Libre (TeamLab o compras)", stop: { gmaps: "https://www.google.com/maps/search/?api=1&query=teamLab%20Planets%20Tokyo" } },
+      { time: "Mañana", text: "Libre (TeamLab o compras)", stop: g("teamLab Planets Tokyo") },
       { time: "21:55–04:40 (+1)", text: "Vuelo Tokio → Doha" },
     ],
   },
 ];
 
-// Cabecera del día (igual que antes)
+// Cabecera del día (igual que antes; sólo lectura de props)
 function DayHeader({
   dateISO,
   city,
   emoji,
   isToday,
-  isPast
+  isPast,
 }: {
   dateISO: string;
   city: string;
@@ -394,9 +428,13 @@ function DayHeader({
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${
-          isPast ? "bg-zinc-100 dark:bg-zinc-800" : "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-        }`}>
+        <div
+          className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${
+            isPast
+              ? "bg-zinc-100 dark:bg-zinc-800"
+              : "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+          }`}
+        >
           {emoji ?? "📅"}
         </div>
         <div>
@@ -413,6 +451,9 @@ function DayHeader({
   );
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// DayCard: tarjeta de un día con checklist + botón "Mapa del día"
+// ──────────────────────────────────────────────────────────────────────────────
 function DayCard({
   day, done, toggle, setAll, clearAll, defaultOpen,
 }: {
@@ -425,7 +466,10 @@ function DayCard({
 }) {
   const d = new Date(day.date + "T00:00:00");
   const now = new Date();
-  const isPast  = d < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // ✅ FIX: evitamos el paréntesis extra y además lo hacemos más legible
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const isPast  = d < todayStart;
   const isToday = d.toDateString() === new Date().toDateString();
 
   const [open, setOpen] = useState(!!defaultOpen);
@@ -434,6 +478,30 @@ function DayCard({
   const total     = activities.length;
   const completed = activities.reduce((acc, _a, i) => acc + (done[`${day.date}-${i}`] ? 1 : 0), 0);
   const pct       = Math.round((completed / Math.max(1, total)) * 100);
+
+  // Tipo que consume MapDayButton (gmaps obligatorio).
+  // Si tu MapDayButton usa 'placeId' en lugar de 'placed', cambia la clave de abajo.
+  type MapPlace = {
+    id: string;
+    name: string;
+    city: string;
+    gmaps: string;
+    placed?: string;   // <- si tu MapDayButton espera placeId, pon: placeId?: string;
+    lat?: number;
+    lng?: number;
+  };
+
+  // Construimos los puntos del mapa desde las actividades del día
+  const dayPlaces: MapPlace[] = activities.flatMap((a, i) => {
+    if (!a.stop?.gmaps) return [];
+    return [{
+      id: `${day.date}-${i}`,
+      name: a.text,
+      city: day.city,
+      gmaps: a.stop.gmaps,
+      placed: a.stop.placeId ?? undefined, // <- si usas placeId, cambia a: placeId: a.stop.placeId
+    }];
+  });
 
   return (
     <div className="relative">
@@ -465,14 +533,29 @@ function DayCard({
                   <CheckCircle size={16} />
                   <span>{completed}/{total} hechas</span>
                 </div>
-                <div className="text-xs text-zinc-500 dark:text-zinc-400">{pct}%</div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={setAll}
+                    className="text-xs underline underline-offset-2 text-zinc-600 dark:text-zinc-300 hover:opacity-80"
+                  >
+                    Marcar todo
+                  </button>
+                  <span className="text-zinc-400">·</span>
+                  <button
+                    onClick={clearAll}
+                    className="text-xs underline underline-offset-2 text-zinc-600 dark:text-zinc-300 hover:opacity-80"
+                  >
+                    Limpiar
+                  </button>
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400 ml-2">{pct}%</span>
+                </div>
               </div>
 
               <div className="w-full h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
                 <div className="h-full bg-zinc-900 dark:bg-zinc-100" style={{ width: `${pct}%` }} />
               </div>
 
-              {/* Toolbar minimal: solo Ver actividades + Mapa del día */}
+              {/* Toolbar: Ver actividades + Mapa del día */}
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => setOpen(!open)}
@@ -486,20 +569,9 @@ function DayCard({
                   {open ? "Ocultar" : "Ver actividades"}
                 </button>
 
-                {/* Pasa más datos al MapDayButton para abrir fichas oficiales */}
+                {/* Botón de mapa del día con los puntos del propio itinerario */}
                 <div className="min-w-[130px] max-w-full">
-                  <MapDayButton
-                    day={day}
-                    places={PLACES.map((p: any) => ({
-                      id: p.id,
-                      name: p.name,
-                      city: p.city ?? p.area ?? "",
-                      gmaps: p.links?.gmaps,
-                      placeId: p.links?.placeId, // si lo tienes, abre exacto
-                      lat: p.lat,
-                      lng: p.lng,
-                    }))}
-                  />
+                  <MapDayButton day={day} places={dayPlaces} />
                 </div>
               </div>
 
@@ -508,22 +580,37 @@ function DayCard({
                   {activities.map((a, i) => {
                     const id = `${day.date}-${i}`;
                     const checked = !!done[id];
+                    const inputId = `chk-${id}`;
                     return (
                       <li key={id} className="flex items-center gap-3 p-3 bg-white/60 dark:bg-zinc-900/40">
                         <input
+                          id={inputId}
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggle(id)}
                           className="w-5 h-5 rounded-md border-zinc-300 dark:border-zinc-700"
                         />
-                        <div className="flex-1 text-sm">
+                        <label htmlFor={inputId} className="flex-1 text-sm cursor-pointer select-none">
                           {a.time && (
                             <span className="text-zinc-500 dark:text-zinc-400 mr-2">
                               {a.time}
                             </span>
                           )}
                           <span>{a.text}</span>
-                        </div>
+                        </label>
+
+                        {a.stop?.gmaps && (
+                          <a
+                            href={a.stop.gmaps}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs inline-flex items-center gap-1 px-2 py-1 rounded-md border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                            aria-label={`Abrir en Google Maps: ${a.text}`}
+                          >
+                            <ExternalLink size={14} />
+                            Maps
+                          </a>
+                        )}
                       </li>
                     );
                   })}
@@ -531,7 +618,7 @@ function DayCard({
               )}
             </div>
 
-            {/* Galería de fotos del día (versión simple para máxima compatibilidad) */}
+            {/* Galería de fotos del día */}
             <div className="mt-2">
               <PhotoGallery
                 placeId={`day-${day.date}`}
@@ -547,6 +634,9 @@ function DayCard({
 
 
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Itinerary: lista completa de días + notas por bloque
+// ──────────────────────────────────────────────────────────────────────────────
 function Itinerary() {
   const [done, setDone] = useState<Record<string, boolean>>(() => {
     try { return JSON.parse(localStorage.getItem("jp_done_v1") || "{}"); }
@@ -567,7 +657,7 @@ function Itinerary() {
       </SectionCard>
 
       <div className="space-y-6">
-        {ITINERARY.map((day) => { // <- corregido
+        {ITINERARY.map((day) => {
           const toggle = (id: string) =>
             setDone((d) => ({ ...d, [id]: !d[id] }));
 
@@ -614,22 +704,36 @@ function Itinerary() {
 }
 
 
-
 // ──────────────────────────────────────────────────────────────────────────────
 // Bloque 3: Info práctica
 // ──────────────────────────────────────────────────────────────────────────────
+
 function CopyButton({ text, label = "Copiar" }: { text: string; label?: string }) {
   const [ok, setOk] = useState(false);
-  const onCopy = async () => { try { await navigator.clipboard.writeText(text); setOk(true); setTimeout(() => setOk(false), 1200); } catch {} };
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setOk(true);
+      setTimeout(() => setOk(false), 1200);
+    } catch {}
+  };
   return (
-    <button onClick={onCopy} className={`text-xs px-2.5 py-1.5 rounded-lg border ${ok ? "border-emerald-500 text-emerald-700 dark:text-emerald-300" : "border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"} hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-flex items-center gap-1`}>
-      <Copy size={14} />{ok ? "¡Copiado!" : label}
+    <button
+      onClick={onCopy}
+      className={`text-xs px-2.5 py-1.5 rounded-lg border ${
+        ok
+          ? "border-emerald-500 text-emerald-700 dark:text-emerald-300"
+          : "border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"
+      } hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-flex items-center gap-1`}
+      aria-live="polite"
+    >
+      <Copy size={14} />
+      {ok ? "¡Copiado!" : label}
     </button>
   );
 }
 
-// Reemplaza tu función ConverterCard completa por esta
-
+// Conversor EUR ↔ JPY (tasa fija)
 function ConverterCard() {
   const RATE = 173; // tasa fija
   const [eurStr, setEurStr] = useState<string>("1");
@@ -637,24 +741,19 @@ function ConverterCard() {
 
   // Helpers
   const toNumber = (s: string) => parseFloat(s.replace(",", "."));
-  const isEurTyping = (s: string) =>
-    /^(\d+|\d+\.\d{0,2})?$/.test(s.replace(",", ".")); // vacío, enteros, o con 1-2 decimales
-  const isJpyTyping = (s: string) => /^\d*$/.test(s); // sólo dígitos o vacío
+  const isEurTyping = (s: string) => /^(\d+|\d+\.\d{0,2})?$/.test(s.replace(",", "."));
+  const isJpyTyping = (s: string) => /^\d*$/.test(s);
 
   const formatEurForDisplay = (n: number) => {
-    // Mantén 0–2 decimales sin forzar ".00"
     const s = (Math.round(n * 100) / 100).toFixed(2);
     return s.replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
   };
 
   // Cambios mientras tecleas en EUR
   const onEurChange = (v: string) => {
-    if (!isEurTyping(v)) return;       // ignora caracteres no válidos
+    if (!isEurTyping(v)) return;
     setEurStr(v);
-    if (v === "") {                    // vacío -> no calcules
-      setJpyStr("");
-      return;
-    }
+    if (v === "") { setJpyStr(""); return; }
     const n = toNumber(v);
     if (!isNaN(n)) setJpyStr(String(Math.round(n * RATE)));
   };
@@ -663,15 +762,12 @@ function ConverterCard() {
   const onJpyChange = (v: string) => {
     if (!isJpyTyping(v)) return;
     setJpyStr(v);
-    if (v === "") {
-      setEurStr("");
-      return;
-    }
+    if (v === "") { setEurStr(""); return; }
     const n = parseInt(v, 10);
     if (!isNaN(n)) setEurStr(formatEurForDisplay(n / RATE));
   };
 
-  // Formateo suave al salir del campo (sin forzar 2 decimales en vivo)
+  // Formateo al perder foco
   const onEurBlur = () => {
     if (eurStr === "") return;
     const n = toNumber(eurStr);
@@ -691,8 +787,11 @@ function ConverterCard() {
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs text-zinc-500 dark:text-zinc-400">Euros (€)</label>
+            <label htmlFor="inp-eur" className="text-xs text-zinc-500 dark:text-zinc-400">
+              Euros (€)
+            </label>
             <input
+              id="inp-eur"
               value={eurStr}
               onChange={(e) => onEurChange(e.target.value)}
               onBlur={onEurBlur}
@@ -702,8 +801,11 @@ function ConverterCard() {
             />
           </div>
           <div>
-            <label className="text-xs text-zinc-500 dark:text-zinc-400">Yenes (¥)</label>
+            <label htmlFor="inp-jpy" className="text-xs text-zinc-500 dark:text-zinc-400">
+              Yenes (¥)
+            </label>
             <input
+              id="inp-jpy"
               value={jpyStr}
               onChange={(e) => onJpyChange(e.target.value)}
               onBlur={onJpyBlur}
@@ -723,7 +825,6 @@ function ConverterCard() {
   );
 }
 
-
 function EmergencyCard() {
   const items = [
     { label: "Policía", num: "110" },
@@ -734,11 +835,19 @@ function EmergencyCard() {
   return (
     <SectionCard title="Teléfonos de emergencia" subtitle="Útiles en Japón">
       <ul className="grid grid-cols-1 gap-2">
-        {items.map(it => (
-          <li key={it.label} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/40">
+        {items.map((it) => (
+          <li
+            key={it.label}
+            className="flex items-center justify-between gap-3 p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/40"
+          >
             <div>
               <div className="text-sm font-medium">{it.label}</div>
-              <a href={`tel:${it.num.replace(/[^+\d]/g, "")}`} className="text-xs underline text-zinc-500 dark:text-zinc-400">{it.num}</a>
+              <a
+                href={`tel:${it.num.replace(/[^+\d]/g, "")}`}
+                className="text-xs underline text-zinc-500 dark:text-zinc-400"
+              >
+                {it.num}
+              </a>
             </div>
             <CopyButton text={`${it.label}: ${it.num}`} />
           </li>
@@ -749,25 +858,34 @@ function EmergencyCard() {
 }
 
 const PHRASES = [
-  { cat: "Transporte", items: [
-    { jp: "駅はどこですか？", romaji: "Eki wa doko desu ka?", es: "¿Dónde está la estación?" },
-    { jp: "◯◯駅までいくらですか？", romaji: "__ hasta ___ ikura desu ka?", es: "¿Cuánto cuesta hasta la estación ___?" },
-    { jp: "この電車は◯◯に行きますか？", romaji: "Kono densha wa ___ ni ikimasu ka?", es: "¿Este tren va a ___?" },
-    { jp: "切符を二枚ください", romaji: "Kippu o nimai kudasai", es: "Dos billetes, por favor" },
-  ] },
-  { cat: "Restaurantes", items: [
-    { jp: "おすすめは何ですか？", romaji: "Osusume wa nan desu ka?", es: "¿Qué recomiendas?" },
-    { jp: "英語のメニューはありますか？", romaji: "Eigo no menyū wa arimasu ka?", es: "¿Tienen menú en inglés?" },
-    { jp: "グルテンを含みますか？", romaji: "Guruten o fukumi-masu ka?", es: "¿Contiene gluten?" },
-    { jp: "乳製品なしでお願いします", romaji: "Nyūseihin nashi de onegaishimasu", es: "Sin lácteos, por favor" },
-    { jp: "お会計お願いします", romaji: "Okaikei onegaishimasu", es: "La cuenta, por favor" },
-  ] },
-  { cat: "Emergencias", items: [
-    { jp: "助けてください！", romaji: "Tasukete kudasai!", es: "¡Ayuda, por favor!" },
-    { jp: "病院はどこですか？", romaji: "Byōin wa doko desu ka?", es: "¿Dónde está el hospital?" },
-    { jp: "警察を呼んでください", romaji: "Keisatsu o yonde kudasai", es: "Llame a la policía, por favor" },
-    { jp: "道に迷いました", romaji: "Michi ni mayoimashita", es: "Me he perdido" },
-  ] },
+  {
+    cat: "Transporte",
+    items: [
+      { jp: "駅はどこですか？", romaji: "Eki wa doko desu ka?", es: "¿Dónde está la estación?" },
+      { jp: "◯◯駅までいくらですか？", romaji: "__ hasta ___ ikura desu ka?", es: "¿Cuánto cuesta hasta la estación ___?" },
+      { jp: "この電車は◯◯に行きますか？", romaji: "Kono densha wa ___ ni ikimasu ka?", es: "¿Este tren va a ___?" },
+      { jp: "切符を二枚ください", romaji: "Kippu o nimai kudasai", es: "Dos billetes, por favor" },
+    ],
+  },
+  {
+    cat: "Restaurantes",
+    items: [
+      { jp: "おすすめは何ですか？", romaji: "Osusume wa nan desu ka?", es: "¿Qué recomiendas?" },
+      { jp: "英語のメニューはありますか？", romaji: "Eigo no menyū wa arimasu ka?", es: "¿Tienen menú en inglés?" },
+      { jp: "グルテンを含みますか？", romaji: "Guruten o fukumi-masu ka?", es: "¿Contiene gluten?" },
+      { jp: "乳製品なしでお願いします", romaji: "Nyūseihin nashi de onegaishimasu", es: "Sin lácteos, por favor" },
+      { jp: "お会計お願いします", romaji: "Okaikei onegaishimasu", es: "La cuenta, por favor" },
+    ],
+  },
+  {
+    cat: "Emergencias",
+    items: [
+      { jp: "助けてください！", romaji: "Tasukete kudasai!", es: "¡Ayuda, por favor!" },
+      { jp: "病院はどこですか？", romaji: "Byōin wa doko desu ka?", es: "¿Dónde está el hospital?" },
+      { jp: "警察を呼んでください", romaji: "Keisatsu o yonde kudasai", es: "Llame a la policía, por favor" },
+      { jp: "道に迷いました", romaji: "Michi ni mayoimashita", es: "Me he perdido" },
+    ],
+  },
 ] as const;
 
 function PhraseCard({ p }: { p: { jp: string; romaji: string; es: string } }) {
@@ -783,11 +901,24 @@ function PhraseCard({ p }: { p: { jp: string; romaji: string; es: string } }) {
     </li>
   );
 }
+
 function PhrasesSection() {
   const [tab, setTab] = useState(0);
   return (
     <SectionCard title="Frases útiles" subtitle="JP + rōmaji + español · Copia rápida">
-      <div className="flex items-center gap-2 mb-3">{PHRASES.map((g, i) => (<button key={g.cat} onClick={() => setTab(i)} className={`text-xs px-3 py-1.5 rounded-lg border ${tab === i ? "border-zinc-900 dark:border-zinc-100" : "border-zinc-200 dark:border-zinc-700"} hover:bg-zinc-100 dark:hover:bg-zinc-800`}>{g.cat}</button>))}</div>
+      <div className="flex items-center gap-2 mb-3">
+        {PHRASES.map((g, i) => (
+          <button
+            key={g.cat}
+            onClick={() => setTab(i)}
+            className={`text-xs px-3 py-1.5 rounded-lg border ${
+              tab === i ? "border-zinc-900 dark:border-zinc-100" : "border-zinc-200 dark:border-zinc-700"
+            } hover:bg-zinc-100 dark:hover:bg-zinc-800`}
+          >
+            {g.cat}
+          </button>
+        ))}
+      </div>
       <ul className="space-y-2">{PHRASES[tab].items.map((p, idx) => <PhraseCard key={idx} p={p} />)}</ul>
     </SectionCard>
   );
@@ -795,24 +926,44 @@ function PhrasesSection() {
 
 const APPS = [
   { cat: "Transporte", name: "Japan Transit Planner (Jorudan)", icon: Train, desc: "Rutas de tren/metro con precios y tiempos.", link: "https://world.jorudan.co.jp/mln/en/" },
-  { cat: "Transporte", name: "NAVITIME Japan Travel", icon: Train, desc: "Horarios en tiempo real y JR Pass.", link: "https://japantravel.navitime.com/en/" },
-  { cat: "Mapas offline", name: "Google Maps (descargar zonas)", icon: Map, desc: "Descarga áreas para usarlas sin datos.", link: "https://maps.google.com" },
-  { cat: "Mapas offline", name: "MAPS.ME", icon: Map, desc: "Mapas offline con POIs.", link: "https://maps.me" },
-  { cat: "Traducción", name: "Google Translate", icon: Languages, desc: "Traducción por cámara, voz y texto.", link: "https://translate.google.com" },
-  { cat: "Conectividad", name: "Japan Wi‑Fi auto‑connect", icon: Wifi, desc: "Auto-conexión a hotspots.", link: "https://wifi-cloud.jp/en/auto/" },
-  { cat: "Dinero", name: "XE Currency", icon: Download, desc: "Conversor y seguimiento de tasas.", link: "https://www.xe.com/apps/" },
+  { cat: "Transporte", name: "NAVITIME Japan Travel",          icon: Train, desc: "Horarios en tiempo real y JR Pass.",        link: "https://japantravel.navitime.com/en/" },
+
+  // Mapas
+  { cat: "Mapas offline", name: "Google Maps (descargar zonas)", icon: MapIcon, desc: "Descarga áreas para usarlas sin datos.", link: "https://maps.google.com" },
+  { cat: "Mapas offline", name: "MAPS.ME",                        icon: MapIcon, desc: "Mapas offline con POIs.",              link: "https://maps.me" },
+
+  { cat: "Traducción",   name: "Google Translate",        icon: Languages, desc: "Traducción por cámara, voz y texto.", link: "https://translate.google.com" },
+  { cat: "Conectividad", name: "Japan Wi-Fi auto-connect", icon: Wifi,      desc: "Auto-conexión a hotspots.",           link: "https://wifi-cloud.jp/en/auto/" },
+  { cat: "Dinero",       name: "XE Currency",             icon: Download,  desc: "Conversor y seguimiento de tasas.",   link: "https://www.xe.com/apps/" },
 ] as const;
+
 function AppsSection() {
   return (
     <SectionCard title="Apps recomendadas" subtitle="Transporte · Mapas offline · Traductor · Conectividad">
       <div className="grid grid-cols-1 gap-2">
-        {APPS.map(a => { const Icon = a.icon as any; return (
-          <a key={a.name} href={a.link} target="_blank" rel="noreferrer" className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/40 flex items-center gap-3 hover:bg-zinc-100 dark:hover:bg-zinc-800">
-            <div className="w-9 h-9 rounded-lg border border-zinc-200 dark:border-zinc-700 flex items-center justify-center"><Icon size={18} /></div>
-            <div className="flex-1"><div className="text-sm font-medium">{a.name}</div><div className="text-xs text-zinc-500 dark:text-zinc-400">{a.cat} · {a.desc}</div></div>
-            <ExternalLink size={16} className="text-zinc-400" />
-          </a>
-        ); })}
+        {APPS.map((a) => {
+          const Icon: React.ComponentType<{ size?: number; className?: string }> = a.icon as any;
+          return (
+            <a
+              key={a.name}
+              href={a.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/40 flex items-center gap-3 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              <div className="w-9 h-9 rounded-lg border border-zinc-200 dark:border-zinc-700 flex items-center justify-center">
+                <Icon size={18} />
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-medium">{a.name}</div>
+                <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                  {a.cat} · {a.desc}
+                </div>
+              </div>
+              <ExternalLink size={16} className="text-zinc-400" />
+            </a>
+          );
+        })}
       </div>
     </SectionCard>
   );
@@ -831,134 +982,689 @@ function InfoPractical() {
   );
 }
 
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Bloque 4: Lugares
 // ──────────────────────────────────────────────────────────────────────────────
- type Food = { name: string; gf?: boolean; lf?: boolean; note?: string };
- type Place = { id: string; name: string; city: "Osaka" | "Kioto" | "Tokio" | "Hiroshima" | "Miyajima" | "Hakone" | "Nara"; emoji?: string; brief: string; rating: number; links: { official?: string; gmaps?: string }; foods?: Food[] };
- const PLACES: Place[] = [
-  { id: "osaka-castle", name: "Castillo de Osaka", city: "Osaka", emoji: "🏯", brief: "Fortaleza del período Azuchi‑Momoyama con museo y vistas.", rating: 4.6, links: { official: "https://www.osakacastle.net", gmaps: "https://maps.google.com/?q=Osaka+Castle" }, foods: [{ name: "Tako-yaki en Dotonbori", lf: true }, { name: "Okonomiyaki (opción GF)", gf: true, note: "Harina de arroz" }] },
-  { id: "umeda-sky", name: "Umeda Sky Building", city: "Osaka", emoji: "🌆", brief: "Mirador 360º ideal al atardecer.", rating: 4.5, links: { official: "https://www.skybldg.co.jp/en/", gmaps: "https://maps.google.com/?q=Umeda+Sky+Building" }, foods: [{ name: "Shin‑Umeda Shokudogai (opciones SL)", lf: true }] },
-  { id: "miyajima", name: "Santuario Itsukushima (Miyajima)", city: "Miyajima", emoji: "⛩️", brief: "Famoso torii flotante.", rating: 4.8, links: { official: "https://www.miyajima.or.jp/english/", gmaps: "https://maps.google.com/?q=Itsukushima+Shrine" }, foods: [{ name: "Ostras a la parrilla", gf: true, lf: true }, { name: "Momiji‑manju", gf: false, lf: false }] },
-  { id: "fushimi-inari", name: "Fushimi Inari Taisha", city: "Kioto", emoji: "⛩️", brief: "Miles de torii rojos por la colina Inari.", rating: 4.8, links: { official: "https://inari.jp/en/", gmaps: "https://maps.google.com/?q=Fushimi+Inari+Taisha" }, foods: [{ name: "Inari‑zushi", gf: true, lf: true }] },
-  { id: "sensoji", name: "Templo Sensō‑ji", city: "Tokio", emoji: "🏮", brief: "Templo budista más antiguo de Tokio.", rating: 4.7, links: { official: "https://www.senso-ji.jp/english/", gmaps: "https://maps.google.com/?q=Senso-ji" }, foods: [{ name: "Karaage sin rebozado", gf: true }, { name: "Dangos (salsa con gluten)", gf: false, lf: true }] },
-  { id: "tokyo-tower", name: "Tokyo Tower", city: "Tokio", emoji: "🗼", brief: "Torre con miradores y vistas.", rating: 4.5, links: { official: "https://www.tokyotower.co.jp/en.html", gmaps: "https://maps.google.com/?q=Tokyo+Tower" } },
- ];
- function Stars({ value }: { value: number }) { const full = Math.floor(value); return (<div className="flex items-center gap-1 text-amber-500">{Array.from({ length: 5 }).map((_, i) => (<Star key={i} size={14} fill={i < full ? "currentColor" : "none"} className={i < full ? "" : "opacity-40"} />))}<span className="ml-1 text-xs text-zinc-500 dark:text-zinc-400">{value.toFixed(1)}</span></div>); }
- function useFavorites() {
-  const [favs, setFavs] = useState<Record<string, true>>(() => { try { return JSON.parse(localStorage.getItem("jp_favs_v1") || "{}"); } catch { return {}; } });
-  useEffect(() => { try { localStorage.setItem("jp_favs_v1", JSON.stringify(favs)); } catch {} }, [favs]);
-  return { isFav: (id: string) => !!favs[id], toggle: (id: string) => setFavs(f => ({ ...f, [id]: f[id] ? (undefined as any) : true })) } as const;
- }
- function FoodBadges({ f }: { f?: Food[] }) { if (!f || !f.length) return null; return (<div className="flex flex-wrap gap-2 mt-2">{f.map((x, i) => (<span key={i} className="text-[11px] px-2 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700"><span className="inline-flex items-center gap-1"><Utensils size={12} />{x.name}</span>{(x.gf || x.lf) && <span className="ml-1 text-[10px] text-zinc-500 dark:text-zinc-400">{x.gf ? " · GF" : ""}{x.lf ? " · SL" : ""}</span>}</span>))}</div>); }
- function PlaceCard({ p, gf, lf, fav, onFav }: { p: Place; gf: boolean; lf: boolean; fav: boolean; onFav: () => void }) {
-  const foods = (p.foods || []).filter(x => (!gf || x.gf) && (!lf || x.lf));
-  const shareText = lines((p.emoji || "📍") + " " + p.name + " — " + p.city, p.brief, p.links.official ? "Oficial: " + p.links.official : "", p.links.gmaps ? "Mapa: " + p.links.gmaps : "", foods.length ? "Comida cerca: " + foods.slice(0, 2).map(f => f.name).join(", ") : "");
-  const share = async () => { const payload: any = { title: p.name, text: shareText }; if (p.links.gmaps) payload.url = p.links.gmaps; try { if (navigator.share) { await navigator.share(payload); return; } } catch { } try { await navigator.clipboard.writeText(shareText); alert("Copiado para compartir ✨"); } catch { } };
+type Food = { name: string; gf?: boolean; lf?: boolean; note?: string };
+type Place = {
+  id: string;
+  name: string;
+  city: "Osaka" | "Kioto" | "Tokio" | "Hiroshima" | "Miyajima" | "Hakone" | "Nara";
+  emoji?: string;
+  brief: string;
+  rating: number;
+  links: { official?: string; gmaps?: string };
+  foods?: Food[];
+};
+
+const PLACES: Place[] = [
+  {
+    id: "osaka-castle",
+    name: "Castillo de Osaka",
+    city: "Osaka",
+    emoji: "🏯",
+    brief: "Fortaleza del período Azuchi-Momoyama con museo y vistas.",
+    rating: 4.6,
+    links: { official: "https://www.osakacastle.net", gmaps: "https://maps.google.com/?q=Osaka+Castle" },
+    foods: [
+      { name: "Tako-yaki en Dotonbori", lf: true },
+      { name: "Okonomiyaki (opción GF)", gf: true, note: "Harina de arroz" },
+    ],
+  },
+  {
+    id: "umeda-sky",
+    name: "Umeda Sky Building",
+    city: "Osaka",
+    emoji: "🌆",
+    brief: "Mirador 360º ideal al atardecer.",
+    rating: 4.5,
+    links: { official: "https://www.skybldg.co.jp/en/", gmaps: "https://maps.google.com/?q=Umeda+Sky+Building" },
+    foods: [{ name: "Shin-Umeda Shokudogai (opciones SL)", lf: true }],
+  },
+  {
+    id: "miyajima",
+    name: "Santuario Itsukushima (Miyajima)",
+    city: "Miyajima",
+    emoji: "⛩️",
+    brief: "Famoso torii flotante.",
+    rating: 4.8,
+    links: { official: "https://www.miyajima.or.jp/english/", gmaps: "https://maps.google.com/?q=Itsukushima+Shrine" },
+    foods: [
+      { name: "Ostras a la parrilla", gf: true, lf: true },
+      { name: "Momiji-manju", gf: false, lf: false },
+    ],
+  },
+  {
+    id: "fushimi-inari",
+    name: "Fushimi Inari Taisha",
+    city: "Kioto",
+    emoji: "⛩️",
+    brief: "Miles de torii rojos por la colina Inari.",
+    rating: 4.8,
+    links: { official: "https://inari.jp/en/", gmaps: "https://maps.google.com/?q=Fushimi+Inari+Taisha" },
+    foods: [{ name: "Inari-zushi", gf: true, lf: true }],
+  },
+  {
+    id: "sensoji",
+    name: "Templo Sensō-ji",
+    city: "Tokio",
+    emoji: "🏮",
+    brief: "Templo budista más antiguo de Tokio.",
+    rating: 4.7,
+    links: { official: "https://www.senso-ji.jp/english/", gmaps: "https://maps.google.com/?q=Senso-ji" },
+    foods: [
+      { name: "Karaage sin rebozado", gf: true },
+      { name: "Dangos (salsa con gluten)", gf: false, lf: true },
+    ],
+  },
+  {
+    id: "tokyo-tower",
+    name: "Tokyo Tower",
+    city: "Tokio",
+    emoji: "🗼",
+    brief: "Torre con miradores y vistas.",
+    rating: 4.5,
+    links: { official: "https://www.tokyotower.co.jp/en.html", gmaps: "https://maps.google.com/?q=Tokyo+Tower" },
+  },
+];
+
+function Stars({ value }: { value: number }) {
+  const full = Math.floor(value);
+  return (
+    <div className="flex items-center gap-1 text-amber-500">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Star
+          key={i}
+          size={14}
+          fill={i < full ? "currentColor" : "none"}
+          className={i < full ? "" : "opacity-40"}
+        />
+      ))}
+      <span className="ml-1 text-xs text-zinc-500 dark:text-zinc-400">{value.toFixed(1)}</span>
+    </div>
+  );
+}
+
+function useFavorites() {
+  const [favs, setFavs] = useState<Record<string, true>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("jp_favs_v1") || "{}");
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("jp_favs_v1", JSON.stringify(favs));
+    } catch {}
+  }, [favs]);
+
+  const toggle = (id: string) =>
+    setFavs((f) => {
+      if (f[id]) {
+        const copy = { ...f };
+        delete copy[id];
+        return copy;
+      }
+      return { ...f, [id]: true };
+    });
+
+  return { isFav: (id: string) => !!favs[id], toggle } as const;
+}
+
+function FoodBadges({ f }: { f?: Food[] }) {
+  if (!f || !f.length) return null;
+  return (
+    <div className="flex flex-wrap gap-2 mt-2">
+      {f.map((x, i) => (
+        <span
+          key={i}
+          className="text-[11px] px-2 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700"
+          title={`${x.name}${x.gf ? " · sin gluten" : ""}${x.lf ? " · sin lactosa" : ""}`}
+        >
+          <span className="inline-flex items-center gap-1">
+            <Utensils size={12} />
+            {x.name}
+          </span>
+          {(x.gf || x.lf) && (
+            <span className="ml-1 text-[10px] text-zinc-500 dark:text-zinc-400">
+              {x.gf ? " · GF" : ""}
+              {x.lf ? " · SL" : ""}
+            </span>
+          )}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function PlaceCard({
+  p,
+  gf,
+  lf,
+  fav,
+  onFav,
+}: {
+  p: Place;
+  gf: boolean;
+  lf: boolean;
+  fav: boolean;
+  onFav: () => void;
+}) {
+  const foods = (p.foods || []).filter((x) => (!gf || x.gf) && (!lf || x.lf));
+  const shareText = lines(
+    (p.emoji || "📍") + " " + p.name + " — " + p.city,
+    p.brief,
+    p.links.official ? "Oficial: " + p.links.official : "",
+    p.links.gmaps ? "Mapa: " + p.links.gmaps : "",
+    foods.length ? "Comida cerca: " + foods.slice(0, 2).map((f) => f.name).join(", ") : ""
+  );
+
+  const share = async () => {
+    const payload: any = { title: p.name, text: shareText };
+    if (p.links.gmaps) payload.url = p.links.gmaps;
+    try {
+      if (navigator.share) {
+        await navigator.share(payload);
+        return;
+      }
+    } catch {}
+    try {
+      await navigator.clipboard.writeText(shareText);
+      alert("Copiado para compartir ✨");
+    } catch {}
+  };
+
   return (
     <div className="p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/40 space-y-2">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-xl">{p.emoji || "📍"}</div><div><div className="text-sm text-zinc-500 dark:text-zinc-400">{p.city}</div><h3 className="text-base font-semibold leading-tight">{p.name}</h3></div></div>
-        <button onClick={onFav} aria-label="Favorito" className={`p-2 rounded-lg border ${fav ? "border-rose-400" : "border-zinc-200 dark:border-zinc-700"} hover:bg-zinc-100 dark:hover:bg-zinc-800`}><Heart size={16} className={fav ? "text-rose-500" : "text-zinc-500"} /></button>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-xl">
+            {p.emoji || "📍"}
+          </div>
+          <div>
+            <div className="text-sm text-zinc-500 dark:text-zinc-400">{p.city}</div>
+            <h3 className="text-base font-semibold leading-tight">{p.name}</h3>
+          </div>
+        </div>
+        <button
+          onClick={onFav}
+          aria-label={fav ? "Quitar de favoritos" : "Añadir a favoritos"}
+          className={`p-2 rounded-lg border ${
+            fav ? "border-rose-400" : "border-zinc-200 dark:border-zinc-700"
+          } hover:bg-zinc-100 dark:hover:bg-zinc-800`}
+        >
+          <Heart size={16} className={fav ? "text-rose-500" : "text-zinc-500"} />
+        </button>
       </div>
+
       <div className="text-sm">{p.brief}</div>
-      <div className="flex items-center justify-between"><Stars value={p.rating} /><div className="flex items-center gap-2 text-xs">{p.links.official && <a href={p.links.official} target="_blank" rel="noreferrer" className="underline">Oficial</a>}{p.links.gmaps && <a href={p.links.gmaps} target="_blank" rel="noreferrer" className="underline">Mapa</a>}</div></div>
-      {foods.length ? (<div><div className="text-xs text-zinc-500 dark:text-zinc-400">Recomendaciones cerca</div><FoodBadges f={foods} /></div>) : (p.foods && p.foods.length ? <div className="text-xs text-zinc-500 dark:text-zinc-400">*No hay resultados que cumplan los filtros*</div> : null)}
+
+      <div className="flex items-center justify-between">
+        <Stars value={p.rating} />
+        <div className="flex items-center gap-2 text-xs">
+          {p.links.official && (
+            <a
+              href={p.links.official}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              Oficial
+            </a>
+          )}
+          {p.links.gmaps && (
+            <a href={p.links.gmaps} target="_blank" rel="noopener noreferrer" className="underline">
+              Mapa
+            </a>
+          )}
+        </div>
+      </div>
+
+      {foods.length ? (
+        <div>
+          <div className="text-xs text-zinc-500 dark:text-zinc-400">Recomendaciones cerca</div>
+          <FoodBadges f={foods} />
+        </div>
+      ) : p.foods && p.foods.length ? (
+        <div className="text-xs text-zinc-500 dark:text-zinc-400">
+          *No hay resultados que cumplan los filtros*
+        </div>
+      ) : null}
+
       <PhotoGallery placeId={p.id} placeName={p.name} />
-      <div className="flex items-center gap-2 pt-1"><button onClick={share} className="text-xs px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-flex items-center gap-1"><Share2 size={14} />Compartir</button>{p.links.gmaps && (<a href={`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`} target="_blank" rel="noreferrer" className="text-xs px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">WhatsApp</a>)}</div>
+
+      <div className="flex items-center gap-2 pt-1">
+        <button
+          onClick={share}
+          className="text-xs px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-flex items-center gap-1"
+          aria-label="Compartir lugar"
+        >
+          <Share2 size={14} />
+          Compartir
+        </button>
+        <a
+          href={`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        >
+          WhatsApp
+        </a>
+      </div>
     </div>
   );
- }
- function PlacesSection() {
-  const [q, setQ] = useState(""); const [city, setCity] = useState<string>("Todas"); const [gf, setGF] = useState(false); const [lf, setLF] = useState(false); const { isFav, toggle } = useFavorites();
+}
+
+function PlacesSection() {
+  const [q, setQ] = useState("");
+  const [city, setCity] = useState<string>("Todas");
+  const [gf, setGF] = useState(false);
+  const [lf, setLF] = useState(false);
+  const { isFav, toggle } = useFavorites();
+
   const cities = ["Todas", "Osaka", "Kioto", "Tokio", "Hiroshima", "Miyajima", "Hakone", "Nara"] as const;
-  const filtered = useMemo(() => PLACES.filter(p => { const text = (p.name + " " + p.city + " " + p.brief).toLowerCase(); const okQ = !q || text.includes(q.toLowerCase()); const okCity = city === "Todas" || p.city === city; if (!okQ || !okCity) return false; if (gf || lf) { const foods = (p.foods || []).filter(x => (!gf || x.gf) && (!lf || x.lf)); return foods.length > 0; } return true; }).sort((a, b) => Number(isFav(b.id)) - Number(isFav(a.id)) || b.rating - a.rating), [q, city, gf, lf, isFav]);
+
+  const filtered = useMemo(
+    () =>
+      PLACES.filter((p) => {
+        const text = (p.name + " " + p.city + " " + p.brief).toLowerCase();
+        const okQ = !q || text.includes(q.toLowerCase());
+        const okCity = city === "Todas" || p.city === (city as any);
+        if (!okQ || !okCity) return false;
+        if (gf || lf) {
+          const foods = (p.foods || []).filter((x) => (!gf || x.gf) && (!lf || x.lf));
+          return foods.length > 0;
+        }
+        return true;
+      }).sort((a, b) => Number(isFav(b.id)) - Number(isFav(a.id)) || b.rating - a.rating),
+    [q, city, gf, lf, isFav]
+  );
+
   return (
     <div className="space-y-4">
       <SectionCard title="Lugares" subtitle="Historia breve, enlaces y comida cerca (GF/SL)">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
-            <div className="flex-1 relative"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" /><input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar…" className="w-full rounded-xl pl-9 pr-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm" /></div>
-            <select value={city} onChange={e => setCity(e.target.value)} className="rounded-xl px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm">{cities.map(c => <option key={c} value={c}>{c}</option>)}</select>
+            <div className="flex-1 relative">
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
+              />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Buscar…"
+                className="w-full rounded-xl pl-9 pr-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm"
+                aria-label="Buscar lugares"
+              />
+            </div>
+            <select
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="rounded-xl px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm"
+              aria-label="Filtrar por ciudad"
+            >
+              {cities.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
           </div>
-          <div className="flex items-center gap-2"><label className="text-xs inline-flex items-center gap-2"><input type="checkbox" checked={gf} onChange={() => setGF(!gf)} /> Gluten‑free</label><label className="text-xs inline-flex items-center gap-2"><input type="checkbox" checked={lf} onChange={() => setLF(!lf)} /> Sin lactosa</label></div>
+
+          <div className="flex items-center gap-4">
+            <label className="text-xs inline-flex items-center gap-2" htmlFor="flt-gf">
+              <input
+                id="flt-gf"
+                type="checkbox"
+                checked={gf}
+                onChange={() => setGF(!gf)}
+              />
+              Gluten-free
+            </label>
+            <label className="text-xs inline-flex items-center gap-2" htmlFor="flt-lf">
+              <input
+                id="flt-lf"
+                type="checkbox"
+                checked={lf}
+                onChange={() => setLF(!lf)}
+              />
+              Sin lactosa
+            </label>
+          </div>
         </div>
       </SectionCard>
-      <div className="space-y-3">{filtered.map(p => (<PlaceCard key={p.id} p={p} gf={gf} lf={lf} fav={isFav(p.id)} onFav={() => toggle(p.id)} />))}{!filtered.length && (<div className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-6">No hay resultados.</div>)}</div>
+
+      <div className="space-y-3">
+        {filtered.map((p) => (
+          <PlaceCard key={p.id} p={p} gf={gf} lf={lf} fav={isFav(p.id)} onFav={() => toggle(p.id)} />
+        ))}
+        {!filtered.length && (
+          <div className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-6">
+            No hay resultados.
+          </div>
+        )}
+      </div>
     </div>
   );
- }
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Bloque 5: Gastos
 // ──────────────────────────────────────────────────────────────────────────────
- type Expense = { id: string; concept: string; amount: number; split: number; payer?: string };
- function QuickCalcCard({ onAdd }: { onAdd: (e: Expense) => void }) {
-  const [concept, setConcept] = useState("Hotel"); const [pricePerPerson, setPPP] = useState<number>(40); const [nights, setNights] = useState<number>(1); const [people, setPeople] = useState<number>(11);
-  const total = (pricePerPerson || 0) * (nights || 0) * (people || 0); const perPerson = (pricePerPerson || 0) * (nights || 0);
-  const add = () => onAdd({ id: `${Date.now()}`, concept: `${concept} (${nights} noche/s)`, amount: Number(total.toFixed(2)), split: people });
+type Expense = { id: string; concept: string; amount: number; split: number; payer?: string };
+
+function QuickCalcCard({ onAdd }: { onAdd: (e: Expense) => void }) {
+  const [concept, setConcept] = useState("Hotel");
+  const [pricePerPerson, setPPP] = useState<number>(40);
+  const [nights, setNights] = useState<number>(1);
+  const [people, setPeople] = useState<number>(11);
+
+  const total = (pricePerPerson || 0) * (nights || 0) * (people || 0);
+  const perPerson = (pricePerPerson || 0) * (nights || 0);
+
+  const add = () =>
+    onAdd({
+      id: `${Date.now()}`,
+      concept: `${concept} (${nights} noche/s)`,
+      amount: Number(total.toFixed(2)),
+      split: people,
+    });
+
   return (
     <SectionCard title="Calculadora rápida" subtitle="Ej.: hotel a 40€/persona/noche">
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
-          <div><label className="text-xs text-zinc-500 dark:text-zinc-400">Concepto</label><input value={concept} onChange={e => setConcept(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2" /></div>
-          <div><label className="text-xs text-zinc-500 dark:text-zinc-400">€/persona/noche</label><input type="number" value={pricePerPerson} onChange={e => setPPP(Number(e.target.value) || 0)} className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2" /></div>
-          <div><label className="text-xs text-zinc-500 dark:text-zinc-400">Noches</label><input type="number" value={nights} onChange={e => setNights(Number(e.target.value) || 0)} className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2" /></div>
-          <div><label className="text-xs text-zinc-500 dark:text-zinc-400">Personas</label><input type="number" value={people} onChange={e => setPeople(Number(e.target.value) || 0)} className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2" /></div>
+          <div>
+            <label className="text-xs text-zinc-500 dark:text-zinc-400">Concepto</label>
+            <input
+              value={concept}
+              onChange={(e) => setConcept(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-zinc-500 dark:text-zinc-400">€/persona/noche</label>
+            <input
+              type="number"
+              value={pricePerPerson}
+              onChange={(e) => setPPP(Number(e.target.value) || 0)}
+              className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-zinc-500 dark:text-zinc-400">Noches</label>
+            <input
+              type="number"
+              value={nights}
+              onChange={(e) => setNights(Number(e.target.value) || 0)}
+              className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-zinc-500 dark:text-zinc-400">Personas</label>
+            <input
+              type="number"
+              value={people}
+              onChange={(e) => setPeople(Number(e.target.value) || 0)}
+              className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
+            />
+          </div>
         </div>
-        <div className="flex items-center justify-between text-sm"><div className="flex items-center gap-2"><Calculator size={16} />Total</div><div className="font-medium">{formatEUR(total)}</div></div>
-        <div className="flex items-center justify-between text-sm"><div className="flex items-center gap-2"><Users size={16} />Por persona</div><div className="font-medium">{formatEUR(perPerson)}</div></div>
-        <div className="flex items-center gap-2"><button onClick={add} className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-flex items-center gap-1"><Plus size={16} />Añadir como gasto</button><CopyButton text={`${concept}: ${formatEUR(total)} (split ${people}) · ${formatEUR(perPerson)} pp`} label="Copiar" /></div>
+
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2">
+            <Calculator size={16} />
+            Total
+          </div>
+          <div className="font-medium">{formatEUR(total)}</div>
+        </div>
+
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2">
+            <Users size={16} />
+            Por persona
+          </div>
+          <div className="font-medium">{formatEUR(perPerson)}</div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={add}
+            className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-flex items-center gap-1"
+          >
+            <Plus size={16} />
+            Añadir como gasto
+          </button>
+          <CopyButton
+            text={`${concept}: ${formatEUR(total)} (split ${people}) · ${formatEUR(perPerson)} pp`}
+            label="Copiar"
+          />
+        </div>
       </div>
     </SectionCard>
   );
- }
- function ExpensesSection() {
-  const [items, setItems] = useState<Expense[]>(() => { try { return JSON.parse(localStorage.getItem("jp_expenses_v1") || "[]"); } catch { return []; } });
-  const [concept, setConcept] = useState("Gasto"); const [amount, setAmount] = useState<number>(0); const [split, setSplit] = useState<number>(11); const [payer, setPayer] = useState("");
-  useEffect(() => { try { localStorage.setItem("jp_expenses_v1", JSON.stringify(items)); } catch { } }, [items]);
-  const add = (e?: Expense) => { const entry = e ?? { id: `${Date.now()}`, concept, amount: Number(amount) || 0, split: Math.max(1, Number(split) || 11), payer: payer || undefined }; if (!entry.concept || !entry.amount) return; setItems(arr => [entry, ...arr]); if (!e) { setConcept("Gasto"); setAmount(0); setSplit(11); setPayer(""); } };
-  const del = (id: string) => setItems(arr => arr.filter(x => x.id !== id)); const clear = () => { if (confirm("¿Borrar todos los gastos?")) setItems([]); };
-  const total = items.reduce((s, x) => s + (x.amount || 0), 0); const perPerson = items.reduce((s, x) => s + (x.amount || 0) / (x.split || 1), 0);
-  const summaryText = lines("🧾 GASTOS COMPARTIDOS", ...items.map(x => `• ${x.concept}: ${formatEUR(x.amount)} (split ${x.split}${x.payer ? ", pagó " + x.payer : ""}) → ${formatEUR((x.amount || 0) / (x.split || 1))} pp`), `— Total: ${formatEUR(total)}`, `— Por persona: ${formatEUR(perPerson)}`);
-  const share = async () => { try { if (navigator.share) { await navigator.share({ title: "Gastos", text: summaryText }); return; } } catch { } try { await navigator.clipboard.writeText(summaryText); alert("Resumen copiado ✨"); } catch { } };
+}
+
+function ExpensesSection() {
+  const [items, setItems] = useState<Expense[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("jp_expenses_v1") || "[]");
+    } catch {
+      return [];
+    }
+  });
+  const [concept, setConcept] = useState("Gasto");
+  const [amount, setAmount] = useState<number>(0);
+  const [split, setSplit] = useState<number>(11);
+  const [payer, setPayer] = useState("");
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("jp_expenses_v1", JSON.stringify(items));
+    } catch {}
+  }, [items]);
+
+  const add = (e?: Expense) => {
+    const entry =
+      e ??
+      ({
+        id: `${Date.now()}`,
+        concept,
+        amount: Number(amount) || 0,
+        split: Math.max(1, Number(split) || 11),
+        payer: payer || undefined,
+      } as Expense);
+
+    if (!entry.concept || !entry.amount) return;
+    setItems((arr) => [entry, ...arr]);
+
+    if (!e) {
+      setConcept("Gasto");
+      setAmount(0);
+      setSplit(11);
+      setPayer("");
+    }
+  };
+
+  const del = (id: string) => setItems((arr) => arr.filter((x) => x.id !== id));
+  const clear = () => {
+    if (confirm("¿Borrar todos los gastos?")) setItems([]);
+  };
+
+  const total = items.reduce((s, x) => s + (x.amount || 0), 0);
+  const perPerson = items.reduce((s, x) => s + (x.amount || 0) / (x.split || 1), 0);
+
+  const summaryText = lines(
+    "🧾 GASTOS COMPARTIDOS",
+    ...items.map(
+      (x) =>
+        `• ${x.concept}: ${formatEUR(x.amount)} (split ${x.split}${
+          x.payer ? ", pagó " + x.payer : ""
+        }) → ${formatEUR((x.amount || 0) / (x.split || 1))} pp`
+    ),
+    `— Total: ${formatEUR(total)}`,
+    `— Por persona: ${formatEUR(perPerson)}`
+  );
+
+  const share = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Gastos", text: summaryText });
+        return;
+      }
+    } catch {}
+    try {
+      await navigator.clipboard.writeText(summaryText);
+      alert("Resumen copiado ✨");
+    } catch {}
+  };
+
   return (
     <div className="space-y-4">
-      <QuickCalcCard onAdd={e => add(e)} />
+      <QuickCalcCard onAdd={(e) => add(e)} />
+
       <SectionCard title="Gastos compartidos" subtitle="Registra, divide entre el grupo y comparte">
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <div><label className="text-xs text-zinc-500 dark:text-zinc-400">Concepto</label><input value={concept} onChange={e => setConcept(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2" /></div>
-            <div><label className="text-xs text-zinc-500 dark:text-zinc-400">Importe (€)</label><input type="number" value={amount} onChange={e => setAmount(Number(e.target.value) || 0)} className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2" /></div>
-            <div><label className="text-xs text-zinc-500 dark:text-zinc-400">Dividir entre</label><input type="number" value={split} onChange={e => setSplit(Number(e.target.value) || 1)} className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2" /></div>
-            <div><label className="text-xs text-zinc-500 dark:text-zinc-400">Pagado por (opcional)</label><input value={payer} onChange={e => setPayer(e.target.value)} placeholder="Nombre" className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2" /></div>
+            <div>
+              <label className="text-xs text-zinc-500 dark:text-zinc-400">Concepto</label>
+              <input
+                value={concept}
+                onChange={(e) => setConcept(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-zinc-500 dark:text-zinc-400">Importe (€)</label>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(Number(e.target.value) || 0)}
+                className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-zinc-500 dark:text-zinc-400">Dividir entre</label>
+              <input
+                type="number"
+                value={split}
+                onChange={(e) => setSplit(Number(e.target.value) || 1)}
+                className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-zinc-500 dark:text-zinc-400">Pagado por (opcional)</label>
+              <input
+                value={payer}
+                onChange={(e) => setPayer(e.target.value)}
+                placeholder="Nombre"
+                className="mt-1 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
+              />
+            </div>
           </div>
-          <div className="flex items-center gap-2"><button onClick={() => add()} className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-flex items-center gap-1"><Plus size={16} />Añadir</button><CopyButton text={`${concept}: ${formatEUR(amount)} (split ${split})`} label="Copiar línea" />{items.length > 0 && <button onClick={clear} className="ml-auto text-xs px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Borrar todo</button>}</div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => add()}
+              className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-flex items-center gap-1"
+            >
+              <Plus size={16} />
+              Añadir
+            </button>
+            <CopyButton text={`${concept}: ${formatEUR(amount)} (split ${split})`} label="Copiar línea" />
+            {items.length > 0 && (
+              <button
+                onClick={clear}
+                className="ml-auto text-xs px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                Borrar todo
+              </button>
+            )}
+          </div>
+
           <ul className="divide-y divide-zinc-100 dark:divide-zinc-800 rounded-xl border border-zinc-100 dark:border-zinc-800 overflow-hidden">
-            {items.length === 0 && <li className="p-4 text-sm text-zinc-500 dark:text-zinc-400">Aún no hay gastos.</li>}
-            {items.map(x => (
+            {items.length === 0 && (
+              <li className="p-4 text-sm text-zinc-500 dark:text-zinc-400">Aún no hay gastos.</li>
+            )}
+            {items.map((x) => (
               <li key={x.id} className="p-3 flex items-center gap-3 bg-white/60 dark:bg-zinc-900/40">
-                <div className="flex-1"><div className="text-sm font-medium">{x.concept}</div><div className="text-xs text-zinc-500 dark:text-zinc-400">{formatEUR(x.amount)} · split {x.split}{x.payer ? ` · pagó ${x.payer}` : ""} → <span className="font-medium">{formatEUR((x.amount || 0) / (x.split || 1))}</span> pp</div></div>
-                <button onClick={() => del(x.id)} className="p-2 rounded-md border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800" aria-label="Eliminar"><Trash2 size={16} /></button>
+                <div className="flex-1">
+                  <div className="text-sm font-medium">{x.concept}</div>
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                    {formatEUR(x.amount)} · split {x.split}
+                    {x.payer ? ` · pagó ${x.payer}` : ""} →{" "}
+                    <span className="font-medium">
+                      {formatEUR((x.amount || 0) / (x.split || 1))}
+                    </span>{" "}
+                    pp
+                  </div>
+                </div>
+                <button
+                  onClick={() => del(x.id)}
+                  className="p-2 rounded-md border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  aria-label="Eliminar"
+                >
+                  <Trash2 size={16} />
+                </button>
               </li>
             ))}
           </ul>
+
           <div className="pt-1 space-y-2">
-            <div className="flex items-center justify-between text-sm"><span>Total</span><span className="font-medium">{formatEUR(total)}</span></div>
-            <div className="flex items-center justify-between text-sm"><span>Por persona</span><span className="font-medium">{formatEUR(perPerson)}</span></div>
-            <div className="flex items-center gap-2 pt-1"><button onClick={share} className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Compartir</button><a href={`https://api.whatsapp.com/send?text=${encodeURIComponent(summaryText)}`} target="_blank" rel="noreferrer" className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">WhatsApp</a><CopyButton text={summaryText} label="Copiar resumen" /></div>
+            <div className="flex items-center justify-between text-sm">
+              <span>Total</span>
+              <span className="font-medium">{formatEUR(total)}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span>Por persona</span>
+              <span className="font-medium">{formatEUR(perPerson)}</span>
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                onClick={share}
+                className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                Compartir
+              </button>
+              <a
+                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(summaryText)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                WhatsApp
+              </a>
+              <CopyButton text={summaryText} label="Copiar resumen" />
+            </div>
           </div>
         </div>
       </SectionCard>
     </div>
   );
- }
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Bloque 6: Checklist por viajero + Curiosidades
 // ──────────────────────────────────────────────────────────────────────────────
- const TRAVELLERS = ["Moi", "Jani", "Encarni", "MAngel", "Tani", "Isaac", "Aaron", "Elisa", "Josué", "Yacelly", "Alba"] as const;
-// Sustituye TODO el contenido actual de DEFAULT_CHECK_ITEMS por este:
+const TRAVELLERS = [
+  "Moi",
+  "Jani",
+  "Encarni",
+  "MAngel",
+  "Tani",
+  "Isaac",
+  "Aaron",
+  "Elisa",
+  "Josué",
+  "Yacelly",
+  "Alba",
+] as const;
+
+// Versión actualizada del checklist (v2)
 const DEFAULT_CHECK_ITEMS = [
   // 🧾 PAPELES & RESERVAS (hacer YA)
   "🛂 Pasaporte en vigor (mín. 6 meses) + foto + copia en nube",
@@ -1036,15 +1742,15 @@ const slug = (s: string) =>
 
 type CheckItem = { id: string; label: string; done: boolean };
 
-// ── Versión del checklist (cámbiala a "v3" si amplías el default en el futuro)
+// Versión del checklist (cámbiala a "v3" si amplías el default en el futuro)
 const CHECK_VERSION = "v2";
-const KEY     = (name: string) => `jp_checklist_${slug(name)}_${CHECK_VERSION}`;
+const KEY = (name: string) => `jp_checklist_${slug(name)}_${CHECK_VERSION}`;
 const OLD_KEY = (name: string) => `jp_checklist_${slug(name)}_v1`;
 
 // Construye la lista base desde DEFAULT_CHECK_ITEMS, respetando "done" por etiqueta si existía
 function freshFromDefaults(existing?: CheckItem[]): CheckItem[] {
   const doneByLabel = new globalThis.Map<string, boolean>();
-  (existing || []).forEach(i => doneByLabel.set(i.label, !!i.done));
+  (existing || []).forEach((i) => doneByLabel.set(i.label, !!i.done));
 
   const base = DEFAULT_CHECK_ITEMS.map((label, i) => ({
     id: String(i),
@@ -1053,10 +1759,9 @@ function freshFromDefaults(existing?: CheckItem[]): CheckItem[] {
   }));
 
   // Añade ítems personalizados del usuario que no estén en el default
-  const extras = (existing || []).filter(i => !DEFAULT_CHECK_ITEMS.includes(i.label as any));
+  const extras = (existing || []).filter((i) => !DEFAULT_CHECK_ITEMS.includes(i.label as any));
   return [...base, ...extras];
 }
-
 
 function loadChecklist(name: string): CheckItem[] {
   try {
@@ -1094,35 +1799,42 @@ function ChecklistSection() {
   const [items, setItems] = useState<CheckItem[]>(() => loadChecklist(TRAVELLERS[0]));
   const [newItem, setNewItem] = useState("");
 
-  useEffect(() => { setItems(loadChecklist(person)); }, [person]);
-  useEffect(() => { saveChecklist(person, items); }, [person, items]);
+  useEffect(() => {
+    setItems(loadChecklist(person));
+  }, [person]);
 
-  const toggle   = (id: string) => setItems(arr => arr.map(x => x.id === id ? { ...x, done: !x.done } : x));
-  const add      = () => {
+  useEffect(() => {
+    saveChecklist(person, items);
+  }, [person, items]);
+
+  const toggle = (id: string) =>
+    setItems((arr) => arr.map((x) => (x.id === id ? { ...x, done: !x.done } : x)));
+  const add = () => {
     const label = newItem.trim();
     if (!label) return;
-    setItems(arr => [{ id: `u${Date.now()}`, label, done: false }, ...arr]);
+    setItems((arr) => [{ id: `u${Date.now()}`, label, done: false }, ...arr]);
     setNewItem("");
   };
-  const markAll  = () => setItems(arr => arr.map(x => ({ ...x, done: true })));
-  const reset    = () => setItems(freshFromDefaults()); // vuelve al default actualizado
+  const markAll = () => setItems((arr) => arr.map((x) => ({ ...x, done: true })));
+  const reset = () => setItems(freshFromDefaults()); // vuelve al default actualizado
 
-  const doneCount = items.filter(i => i.done).length;
-  const total     = items.length || 1;
-  const pct       = Math.round((doneCount / total) * 100);
-  const pending   = items.filter(i => !i.done).map(i => "• " + i.label);
-  const summary   = lines(
-    `Checklist de ${person}`,
-    `${doneCount}/${items.length} completados`,
-    pending.length ? "Pendiente:" : "Todo listo ✅",
-    ...pending
-  );
+  const doneCount = items.filter((i) => i.done).length;
+  const total = items.length || 1;
+  const pct = Math.round((doneCount / total) * 100);
+  const pending = items.filter((i) => !i.done).map((i) => "• " + i.label);
+  const summary = lines(`Checklist de ${person}`, `${doneCount}/${items.length} completados`, pending.length ? "Pendiente:" : "Todo listo ✅", ...pending);
 
   const share = async () => {
     try {
-      if (navigator.share) { await navigator.share({ title: `Checklist de ${person}`, text: summary }); return; }
+      if (navigator.share) {
+        await navigator.share({ title: `Checklist de ${person}`, text: summary });
+        return;
+      }
     } catch {}
-    try { await navigator.clipboard.writeText(summary); alert("Checklist copiada ✨"); } catch {}
+    try {
+      await navigator.clipboard.writeText(summary);
+      alert("Checklist copiada ✨");
+    } catch {}
   };
 
   return (
@@ -1132,10 +1844,15 @@ function ChecklistSection() {
           <ListChecks size={18} />
           <select
             value={person}
-            onChange={e => setPerson(e.target.value as any)}
+            onChange={(e) => setPerson(e.target.value as any)}
             className="rounded-xl px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm"
+            aria-label="Seleccionar viajero"
           >
-            {TRAVELLERS.map(n => <option key={n} value={n}>{n}</option>)}
+            {TRAVELLERS.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
           </select>
           <div className="ml-auto text-xs text-zinc-500 dark:text-zinc-400">{pct}%</div>
         </div>
@@ -1147,39 +1864,67 @@ function ChecklistSection() {
         <div className="grid grid-cols-3 gap-2">
           <input
             value={newItem}
-            onChange={e => setNewItem(e.target.value)}
+            onChange={(e) => setNewItem(e.target.value)}
             placeholder="Añadir ítem…"
             className="col-span-2 rounded-xl px-3 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm"
+            aria-label="Añadir nuevo ítem"
           />
-          <button onClick={add} className="text-sm px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">
-            Añadir
-          </button>
         </div>
+        <button
+          onClick={add}
+          className="text-sm px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        >
+          Añadir
+        </button>
 
-        <ul className="divide-y divide-zinc-100 dark:divide-zinc-800 rounded-xl border border-zinc-100 dark:border-zinc-800 overflow-hidden">
-          {items.map(i => (
-            <li key={i.id} className="flex items-center gap-3 p-3 bg-white/60 dark:bg-zinc-900/40">
-              <input
-                type="checkbox"
-                checked={i.done}
-                onChange={() => toggle(i.id)}
-                className="w-5 h-5 rounded-md border-zinc-300 dark:border-zinc-700"
-              />
-              <div className={`flex-1 text-sm ${i.done ? "line-through text-zinc-400 dark:text-zinc-500" : ""}`}>
-                {i.label}
-              </div>
-            </li>
-          ))}
+        <ul className="mt-2 divide-y divide-zinc-100 dark:divide-zinc-800 rounded-xl border border-zinc-100 dark:border-zinc-800 overflow-hidden">
+          {items.map((i) => {
+            const cbId = `ck-${person}-${i.id}`;
+            return (
+              <li key={i.id} className="flex items-center gap-3 p-3 bg-white/60 dark:bg-zinc-900/40">
+                <input
+                  id={cbId}
+                  type="checkbox"
+                  checked={i.done}
+                  onChange={() => toggle(i.id)}
+                  className="w-5 h-5 rounded-md border-zinc-300 dark:border-zinc-700"
+                />
+                <label
+                  htmlFor={cbId}
+                  className={`flex-1 text-sm cursor-pointer ${
+                    i.done ? "line-through text-zinc-400 dark:text-zinc-500" : ""
+                  }`}
+                >
+                  {i.label}
+                </label>
+              </li>
+            );
+          })}
         </ul>
 
         <div className="flex items-center gap-2 pt-1">
-          <button onClick={markAll} className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Marcar todo</button>
-          <button onClick={reset}   className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Reset</button>
-          <button onClick={share}   className="ml-auto text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Compartir</button>
+          <button
+            onClick={markAll}
+            className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          >
+            Marcar todo
+          </button>
+          <button
+            onClick={reset}
+            className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          >
+            Reset
+          </button>
+          <button
+            onClick={share}
+            className="ml-auto text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          >
+            Compartir
+          </button>
           <a
             href={`https://api.whatsapp.com/send?text=${encodeURIComponent(summary)}`}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
           >
             WhatsApp
@@ -1196,6 +1941,10 @@ function ChecklistSection() {
   );
 }
 
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Curiosidades
+// ──────────────────────────────────────────────────────────────────────────────
 
 // Sustituye TODO el array FACTS por este:
 const FACTS = [
@@ -1246,31 +1995,103 @@ const FACTS = [
   "🐟 El mercado interior de pescado se movió a Toyosu; Tsukiji ‘outer’ sigue vivo.",
 ] as const;
 
- function CuriositiesSection() {
+function CuriositiesSection() {
   const [idx, setIdx] = useState(0);
-  const next = () => setIdx(i => (i + 1) % FACTS.length);
-  const rand = () => setIdx(i => { let r = i; while (r === i && FACTS.length > 1) { r = Math.floor(Math.random() * FACTS.length); } return r; });
-  const fact = `• ${FACTS[idx]}`; const all = lines("CURIOSIDADES DE JAPÓN", ...FACTS.map(f => "• " + f));
-  const share = async (txt: string) => { try { if (navigator.share) { await navigator.share({ title: "Curiosidades de Japón", text: txt }); return; } } catch { } try { await navigator.clipboard.writeText(txt); alert("Copiado ✨"); } catch { } };
+
+  const next = () => setIdx((i) => (i + 1) % FACTS.length);
+
+  const rand = () =>
+    setIdx((prev) => {
+      if (FACTS.length <= 1) return prev;
+      let r = prev;
+      while (r === prev) r = Math.floor(Math.random() * FACTS.length);
+      return r;
+    });
+
+  const fact = `• ${FACTS[idx]}`;
+  const all  = lines("CURIOSIDADES DE JAPÓN", ...FACTS.map((f) => "• " + f));
+
+  const share = async (txt: string) => {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Curiosidades de Japón", text: txt });
+        return;
+      }
+    } catch {}
+    try {
+      await navigator.clipboard.writeText(txt);
+      alert("Copiado ✨");
+    } catch {}
+  };
+
   return (
     <SectionCard title="Curiosidades de Japón" subtitle="Datos ligeros para el trayecto 🚆">
       <div className="space-y-3">
-        <div className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/40 text-sm">{fact}</div>
-        <div className="flex items-center gap-2">
-          <button onClick={next} className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Siguiente</button>
-          <button onClick={rand} className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-flex items-center gap-1"><Shuffle size={16} />Aleatorio</button>
-          <button onClick={() => share(fact)} className="ml-auto text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Compartir</button>
-          <a href={`https://api.whatsapp.com/send?text=${encodeURIComponent(fact)}`} target="_blank" rel="noreferrer" className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">WhatsApp</a>
+        <div className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/40 text-sm">
+          {fact}
         </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={next}
+            className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          >
+            Siguiente
+          </button>
+          <button
+            onClick={rand}
+            className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-flex items-center gap-1"
+          >
+            <Shuffle size={16} />
+            Aleatorio
+          </button>
+          <button
+            onClick={() => share(fact)}
+            className="ml-auto text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          >
+            Compartir
+          </button>
+          <a
+            href={`https://api.whatsapp.com/send?text=${encodeURIComponent(fact)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          >
+            WhatsApp
+          </a>
+        </div>
+
         <details className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-3">
-          <summary className="cursor-pointer text-sm inline-flex items-center gap-2"><BookOpen size={16} /> Ver lista completa</summary>
-          <ul className="mt-2 space-y-1 text-sm list-disc pl-5">{FACTS.map((f, i) => (<li key={i}>• {f}</li>))}</ul>
-          <div className="mt-2 flex items-center gap-2"><button onClick={() => share(all)} className="text-xs px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800">Compartir todo</button><a href={`https://api.whatsapp.com/send?text=${encodeURIComponent(all)}`} target="_blank" rel="noreferrer" className="text-xs px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hoverbg-zinc-800">WhatsApp</a></div>
+          <summary className="cursor-pointer text-sm inline-flex items-center gap-2">
+            <BookOpen size={16} /> Ver lista completa
+          </summary>
+
+          <ul className="mt-2 space-y-1 text-sm list-disc pl-5">
+            {FACTS.map((f, i) => <li key={i}>{f}</li>)}
+          </ul>
+
+          <div className="mt-2 flex items-center gap-2">
+            <button
+              onClick={() => share(all)}
+              className="text-xs px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              Compartir todo
+            </button>
+            <a
+              href={`https://api.whatsapp.com/send?text=${encodeURIComponent(all)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              WhatsApp
+            </a>
+          </div>
         </details>
       </div>
     </SectionCard>
   );
- }
+}
+
 
 // ──────────────────────────────────────────────────────────────────────────────
 // App principal
@@ -1286,7 +2107,25 @@ export default function JapanTripApp() {
     icon: React.ComponentType<{ size?: number }>;
     emoji?: string;
   };
-  const tabs = (TABS as unknown as TabLike[]);
+  const tabs = TABS as unknown as TabLike[];
+
+  // Deep link: lee ?t= al cargar (itinerary/map/info/places/expenses/gastro/photo/game/flight)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get("t") as TabKey | null;
+    if (t && TABS.some((x) => x.key === t)) setTab(t);
+  }, []);
+
+  // Deep link: actualiza ?t= al cambiar de pestaña
+  const setTabAndUrl = (k: TabKey) => {
+    setTab(k);
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      params.set("t", k);
+      window.history.replaceState(null, "", `?${params.toString()}`);
+    }
+  };
 
   useEffect(() => {
     // Smoke tests ligeros
@@ -1329,7 +2168,7 @@ export default function JapanTripApp() {
           </div>
         </header>
 
-        {/* Más padding abajo para el nuevo nav + tipografía un pelín mayor en móvil */}
+        {/* Más padding abajo para el nav + tipografía un pelín mayor en móvil */}
         <main className="max-w-md mx-auto px-4 pt-4 pb-24 text-[15.5px] sm:text-[15px] md:text-base">
           <AnimatePresence mode="wait">
             <motion.div
@@ -1404,8 +2243,8 @@ export default function JapanTripApp() {
           </AnimatePresence>
         </main>
 
-        {/* Menú inferior en carrusel */}
-        <BottomNav tabs={tabs} current={tab} onChange={(k) => setTab(k as TabKey)} />
+        {/* Menú inferior */}
+        <BottomNav tabs={tabs} current={tab} onChange={(k) => setTabAndUrl(k as TabKey)} />
       </div>
     </div>
   );
